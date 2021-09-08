@@ -1,0 +1,3 @@
+FROM debian:buster-slim
+COPY bin/gor  /gor
+ENTRYPOINT [ "/gor", "--input-raw", ":80", "--input-raw-track-response", "--output-resurface", "http://localhost:4001/message", "--output-resurface-rules", "include debug" ]

@@ -1,0 +1,4 @@
+FROM debian:buster-slim
+COPY bin/pkg/  /home/pkg/
+RUN dpkg -i /home/pkg/gor_RESURFACE_LOGGER_amd64.deb
+ENTRYPOINT [ "gor", "--input-raw", ":3000", "--input-raw-track-response", "--output-stdout" ]
