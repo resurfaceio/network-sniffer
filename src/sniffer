@@ -2,6 +2,10 @@
 if [ $# -eq 0 ]; then
     supervisorctl status goreplay
 elif [ $1 = "on" ]; then
+    if [ $(echo $2 | grep -E "^[0-9]+$") ]; then 
+        export APP_PORT=$2
+    fi
+    echo $APP_PORT
     supervisorctl start goreplay
 elif [ $1 = "off" ]; then
     supervisorctl stop goreplay
