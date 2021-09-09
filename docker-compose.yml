@@ -3,13 +3,13 @@ version: "3.4"
 services:
   resurface:
     image: resurfaceio/resurface:2.3.1
-    container_name: resurface-goreplay
+    container_name: resurface
     ports:
       - 4000:4000
       - 4001:4001
       - 4002:4002
   
   goreplay:
-    image: goreplay-debian:latest
-    container_name: goreplay-resurface
+    image: goreplay:latest
+    container_name: goreplay
     network_mode: "host"
