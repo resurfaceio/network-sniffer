@@ -1,29 +1,28 @@
 # goreplay
-Log detailed API requests and responses from network traffic with GoReplay to your own [system of record](https://resurface.io).
+Log detailed API calls from network traffic with GoReplay to your own [system of record](https://resurface.io).
 
 ## Requirements
 - docker
 - [Resurface](https://resurface.io/installation) (free docker container)
+- [npcap](https://nmap.org/npcap/) (Windows)
 
-## Options
-We offer three different alternatives to run Resurface alongside GoReplay:
-- [All-in-one container](#all-in-one-container)
-- [Sidecar container](#sidecar-container)
-- [Use GoReplay directly in your host machine](#direct-approach-option)
+## Capturing network traffic
+Resurface uses [GoReplay](https://goreplay.org/) to log HTTP traffic from the network. We offer different alternatives to accomplish this:
+- [All-in-one container](#all-in-one-container) (Linux only)
+- [Sidecar container](#sidecar-container) (Linux only)
+- [Run GoReplay directly on your host machine](#direct-approach-option)
 
 ### All-in-one container
-This is the easiest option. Works great for demos, dev environments, and single-node solutions but it might not provide the flexibility needed in a production environment.
+GoReplay runs alongside Resurface in the same container. This option works great for demos, dev environments, and single-node solutions but it might not provide the flexibility needed in a production environment.
 
-#### Building the container
+#### Building the image
 - Clone this repo
 - `cd` into the directory where you cloned it
 - Run `docker build -t resurface:gor .`
 
 #### Running the container
 - Build the image
-- Run:
-  - **Linux**: `docker run -d --name resurface-gor --network host resurface:gor`
-  - **macOS**: `docker run -d --name resurface-gor --add_host localhost:$(nslookup host.docker.internal) resurface:gor`
+- Run `docker run -d --name resurface-gor --network host resurface:gor`
 
 #### Working with the network sniffer
 The GoReplay application does not autostart by default. Instead you can start and stop it when you need it, like this:
@@ -32,9 +31,9 @@ The GoReplay application does not autostart by default. Instead you can start an
 - Status: `docker exec goreplay-resurface sniffer`
 
 ### Sidecar container
-This is the most flexible option. Works great when orchestrating different applications.
+GoReplay runs as an independent containerized application. This option works great when orchestrating different containerized applications. In this example, we use `docker-compose` but you can use any other orchestration tool.
 
-#### Building the container
+#### Building the image
 - Clone this repo
 - `cd` into the directory where you cloned it
 - Run `docker build -t resurface:gor -f Dockerfile.sidecar .`
@@ -50,7 +49,7 @@ The GoReplay application does not autostart by default. Instead you can start an
 - Status: `docker exec goreplay-resurface sniffer`
 
 ### Direct approach option
-This option allows you to the run GoReplay binary directly on your host machine.
+This option allows you to run the GoReplay binary directly on your host machine. Choose this option if your host machine isn't running Linux.
 
 #### Download the network sniffer application
 - Download the tarball or binary file that corresponds to you system from the ~latest release~ [bin directory](https://github.com/resurfaceio/goreplay/tree/master/bin).
