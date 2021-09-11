@@ -25,9 +25,9 @@ GoReplay runs alongside Resurface in the same container. This option works great
 
 #### Working with the network sniffer
 The GoReplay application does not autostart by default. Instead you can start and stop it when you need it, like this:
-- **Start**: `docker exec goreplay-resurface sniffer on`
-- **Stop**: `docker exec goreplay-resurface sniffer off`
-- **Status**: `docker exec goreplay-resurface sniffer`
+- **Start**: `docker exec resurface-gor sniffer on`
+- **Stop**: `docker exec resurface-gor sniffer off`
+- **Status**: `docker exec resurface-gor sniffer`
 
 ### Sidecar container
 GoReplay runs as an independent containerized application. This option works great when orchestrating different containerized applications. In this example, we use `docker-compose` but you can use any other orchestration tool.
@@ -39,13 +39,8 @@ GoReplay runs as an independent containerized application. This option works gre
 
 #### Running the containers
 - Build the image
+- Modify the `.env` file with the required [environment variables](#environment-variables) according to your setup.
 - Run `docker-compose up`
-
-#### Working with the network sniffer
-The GoReplay application does not autostart by default. Instead you can start and stop it when you need it, like this:
-- **Start**: `docker exec goreplay-resurface sniffer on`
-- **Stop**: `docker exec goreplay-resurface sniffer off`
-- **Status**: `docker exec goreplay-resurface sniffer`
 
 ### Direct approach option
 This option allows you to run the GoReplay binary directly on your host machine. Choose this option if your host machine isn't running Linux.
