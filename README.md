@@ -4,7 +4,6 @@ Log detailed API calls from network traffic with GoReplay to your own [system of
 ## Requirements
 - docker
 - [Resurface](https://resurface.io/installation) (free docker container)
-- [npcap](https://nmap.org/npcap/) (Windows)
 
 ## Capturing network traffic
 Resurface uses [GoReplay](https://goreplay.org/) to log HTTP traffic from the network. We offer different alternatives to accomplish this:
@@ -51,8 +50,11 @@ The GoReplay application does not autostart by default. Instead you can start an
 ### Direct approach option
 This option allows you to run the GoReplay binary directly on your host machine. Choose this option if your host machine isn't running Linux.
 
+#### Install npcap (Windows only)
+By default, Windows doesn't support packet capture like Unix systems do. In order to perform this operation, a packet capture library like [npcap](https://nmap.org/npcap/) must be installed first.
+
 #### Download the network sniffer application
-- Download the tarball or binary file that corresponds to you system from the ~latest release~ [bin directory](https://github.com/resurfaceio/goreplay/tree/master/bin).
+- Download the tarball or binary file that corresponds to you system from the [bin directory](https://github.com/resurfaceio/goreplay/tree/master/bin).
 - Extract or install accordingly.
 
 #### Running the network sniffer application
