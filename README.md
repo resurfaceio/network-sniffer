@@ -39,7 +39,7 @@ GoReplay runs as an independent containerized application. This option works gre
 
 #### Running the containers
 - Build the image
-- Modify the `.env` file with the required [environment variables](#environment-variables) according to your setup.
+- Modify the `.env` file with the required [environment variables](#environment-variables) accordingly.
 - Run `docker-compose up`
 
 ### Direct approach option
