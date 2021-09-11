@@ -10,6 +10,6 @@ services:
       - 4002:4002
   
   goreplay:
-    image: goreplay:latest
+    image: goreplay:resurface
     container_name: goreplay
     network_mode: "host"
