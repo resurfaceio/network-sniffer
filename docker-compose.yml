@@ -13,3 +13,4 @@ services:
     image: goreplay:resurface
     container_name: goreplay
     network_mode: "host"
+    env_file: ./src/.env

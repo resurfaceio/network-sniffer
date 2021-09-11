@@ -1,4 +1,3 @@
 FROM debian:buster-slim
-ENV USAGE_LOGGERS_URL="http://localhost:4001/message" USAGE_LOGGERS_URL="include debug" APP_PORT=80
 ADD bin/gor_RESURFACE_LOGGER_x64.tar.gz  /bin/
-ENTRYPOINT gor --input-raw :$APP_PORT --input-raw-track-response --output-resurface $USAGE_LOGGERS_URL --output-resurface-rules $USAGE_LOGGERS_RULES
+ENTRYPOINT gor --input-raw :$APP_PORT --input-raw-track-response --output-resurface $USAGE_LOGGERS_URL --output-resurface-rules "$USAGE_LOGGERS_RULES"
