@@ -1,6 +1,14 @@
 # goreplay-dockerized
 Log detailed API calls from network traffic with GoReplay to your own [system of record](https://resurface.io).
 
+## Contents
+- [Requirements](#requirements)
+- [Capturing network traffic](#capturing-network-traffic)
+- [Environment variables](#environment-variables)
+- [VPC mirroring](#vpc-mirroring)
+- [Protecting User Privacy](#protecting-user-privacy)
+
+
 ## Requirements
 - docker
 - [Resurface](https://resurface.io/installation) (free docker container)
@@ -53,7 +61,8 @@ By default, Windows doesn't support packet capture like Unix systems do. In orde
 - Extract or install accordingly.
 
 #### Running the network sniffer application
-- Run `gor --input-raw $APP_PORT --input-track-response --output-resurface $USAGE_LOGGERS_URL --output-resurface-rules $USAGE_LOGGER_RULES`
+- Local network: Run `gor --input-raw $APP_PORT --input-track-response --output-resurface $USAGE_LOGGERS_URL --output-resurface-rules $USAGE_LOGGER_RULES`
+- VPC Mirroring: gor --input-raw $VPC_MIRROR_DEVICE:$APP_PORT --input-raw-track-response --input-raw-bpf-filter "(dst port $APP_PORT) or (src port $APP_POR)" --output-resurface $USAGE_LOGGERS_URL --output-resurface-rules $USAGE_LOGGER_RULES
 
 ## Environment variables
 
@@ -63,6 +72,22 @@ Resurface uses two main environment variables:
 - `USAGE_LOGGERS_RULES` stores a set of rules used to filter sensitive info when logging API calls. [Learn more](#protecting-user-privacy)
 
 In addition, the `APP_PORT` environment variable tells the network sniffer where to listen in the host machine.
+
+## VPC mirroring
+
+Capturing inbound and outbound traffic from the network interfaces that are attached to EC2 instances can be achieved with VPC mirroring. Click [here](http://resurface.io/404) for a step-by-step guide on how to set that up using AWS.
+
+Once you have created the traffic mirror session with its corresponding filter, the mirrored traffic is encapsulated in a VXLAN header. We can set up a new VXLAN interface on top of an existing `eth0` for tunnel endpoint communication using the following command:
+
+    sudo ip link add vx0 type vxlan id $VNI local $SOURCE_EC2_IP remote $TARGET_EC2_IP dev eth0 dstport 4789
+
+Here we are adding a virtual link named `vx0` that will work as a VXLAN interface on top of the `eth0` device. All VXLAN headers are associated with a 24-bit segment ID named VXLAN Network Identifier (VNI) for a given VPC mirroring session. The target EC2 instance will receive the mirrored traffic on the IANA-assigned port, UDP port 4789.
+
+Then, just change the state of the device to UP:
+
+    sudo ip link set vx0 up
+
+Finally, set the environment variable `VPC_MIRROR_DEVICE=vx0` and  run the sniffer application using your favorite alternative.
 
 ## Protecting User Privacy
 
