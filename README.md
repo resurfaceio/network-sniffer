@@ -1,4 +1,4 @@
-# goreplay
+# goreplay-dockerized
 Log detailed API calls from network traffic with GoReplay to your own [system of record](https://resurface.io).
 
 ## Requirements
