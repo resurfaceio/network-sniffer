@@ -62,7 +62,7 @@ By default, Windows doesn't support packet capture like Unix systems do. In orde
 
 #### Running the network sniffer application
 - Local network: Run `gor --input-raw $APP_PORT --input-track-response --output-resurface $USAGE_LOGGERS_URL --output-resurface-rules $USAGE_LOGGER_RULES`
-- VPC Mirroring: gor --input-raw $VPC_MIRROR_DEVICE:$APP_PORT --input-raw-track-response --input-raw-bpf-filter "(dst port $APP_PORT) or (src port $APP_POR)" --output-resurface $USAGE_LOGGERS_URL --output-resurface-rules $USAGE_LOGGER_RULES
+- VPC Mirroring: Run `gor --input-raw $VPC_MIRROR_DEVICE:$APP_PORT --input-raw-track-response --input-raw-bpf-filter "(dst port $APP_PORT) or (src port $APP_POR)" --output-resurface $USAGE_LOGGERS_URL --output-resurface-rules $USAGE_LOGGER_RULES`
 
 ## Environment variables
 
