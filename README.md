@@ -74,7 +74,7 @@ In addition, the `APP_PORT` environment variable tells the network sniffer where
 
 ## VPC mirroring
 
-Capturing inbound and outbound traffic from the network interfaces that are attached to EC2 instances can be achieved with VPC mirroring. Click [here](http://resurface.io/404) for a step-by-step guide on how to set that up using AWS.
+Capturing inbound and outbound traffic from the network interfaces that are attached to EC2 instances can be achieved with VPC mirroring. Click [here](http://resurface.io/blog/api-calls-with-aws-vpc-mirroring) for a step-by-step guide on how to set that up using AWS.
 
 Once you have created the traffic mirror session with its corresponding filter, the mirrored traffic is encapsulated in a VXLAN header. We can set up a new VXLAN interface on top of an existing `eth0` for tunnel endpoint communication using the following command:
 
