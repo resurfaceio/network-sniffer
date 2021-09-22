@@ -11,6 +11,6 @@ services:
   
   sniffer:
     image: goreplay-resurface
-    container_name: network-sniffer
+    container_name: sniffer
     network_mode: "host"
     env_file: ./src/.env
