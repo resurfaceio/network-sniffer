@@ -43,7 +43,7 @@ GoReplay runs as an independent containerized application. This option works gre
 #### Building the image
 - Clone this repo
 - `cd` into the directory where you cloned it
-- Run `docker build -t goreplay:resurface -f Dockerfile.sidecar .`
+- Run `docker build -t goreplay-resurface -f Dockerfile.sidecar .`
 
 #### Running the containers
 - Build the image
