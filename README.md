@@ -70,7 +70,7 @@ Resurface uses two main environment variables:
 - `USAGE_LOGGERS_URL` stores the Resurface database URL, which by default should be `http://localhost:4001/message`
 - `USAGE_LOGGERS_RULES` stores a set of rules used to filter sensitive info when logging API calls. [Learn more](#protecting-user-privacy)
 
-In addition, the `APP_PORT` environment variable tells the network sniffer where to listen in the host machine.
+In addition, the `APP_PORT` environment variable tells the network sniffer where to listen in the host machine, and `VPC_MIRROR_DEVICE` corresponds to a virtual VXLAN interface for [VPC mirroring](#vpc-mirroring).
 
 ## VPC mirroring
 
