@@ -9,8 +9,8 @@ services:
       - 4001:4001
       - 4002:4002
   
-  goreplay:
-    image: goreplay:resurface
-    container_name: goreplay
+  sniffer:
+    image: goreplay-resurface
+    container_name: network-sniffer
     network_mode: "host"
     env_file: ./src/.env
