@@ -1,0 +1,112 @@
+{
+"AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Deploys Target, Filter and Session for VPC Traffic Mirroring",
+    "Parameters": {
+        "VPCID": {
+            "Type": "AWS::EC2::VPC::Id",
+            "Description": "Select the VPC that corresponds to your EC2 instance."
+        },
+        "NetworkInterfaceID": {
+            "Type": "String",
+            "Description": "The ID of the network interface to mirror traffic from."
+        },
+        "ResurfaceCIDR": {
+            "Type": "String",
+            "Description": "CIDR for the Resurface Subnet"
+        },
+        "VirtualNetworkID": {
+            "Type": "Number",
+            "Description": "VXLAN ID for the Traffic Mirror session.",
+            "Default": 8864121
+        }
+    },
+    "Resources": {
+        "ResurfaceSnifferSubnet": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "CidrBlock": { "Ref": "ResurfaceCIDR" },
+                "VpcId": { "Ref": "VPCID" }
+            }
+        },
+        "ResurfaceSnifferSG": {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupDescription" : "Resurface Sniffer Security Group",
+                "VpcId" : { "Ref": "VPCID" }
+            }
+        },
+        "ResurfaceSnifferSGIngress": {
+            "Type" : "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "CidrIp": { "Ref": "ResurfaceCIDR" },
+                "Description" : "Enable UDP mirrored traffic",
+                "FromPort" : 4789,
+                "ToPort": 4789,
+                "GroupId" : { "Ref": "ResurfaceSnifferSG" },
+                "IpProtocol" : "udp"
+            }
+        },
+        "ResurfaceSnifferENI":{
+            "Type" : "AWS::EC2::NetworkInterface",
+            "Properties" : {
+                "GroupSet" : [ { "Ref": "ResurfaceSnifferSG" } ],
+                "SubnetId" : { "Ref": "ResurfaceSnifferSubnet" }
+            }
+        },
+        "ResurfaceMirrorTarget": {
+            "Type" : "AWS::EC2::TrafficMirrorTarget",
+            "Properties" : {
+                "Description" : "",
+                "NetworkInterfaceId" : { "Ref": "ResurfaceSnifferENI" }
+            }
+        },         
+        "ResurfaceMirrorFilter": {
+            "Type" : "AWS::EC2::TrafficMirrorFilter"
+        },
+        "ResurfaceMirrorFilterInboundRule": {
+            "Type" : "AWS::EC2::TrafficMirrorFilterRule",
+            "Properties" : {
+                "Description" : "Mirror all TCP traffic from any location",
+                "DestinationCidrBlock" : "0.0.0.0/0",
+                "Protocol" : 6,
+                "RuleAction" : "accept",
+                "RuleNumber" : 100,
+                "SourceCidrBlock" : "0.0.0.0/0",
+                "TrafficDirection" : "ingress",
+                "TrafficMirrorFilterId" : { "Ref": "ResurfaceMirrorFilter" }
+            }
+        },
+        "ResurfaceMirrorFilterOutboundRule": {
+            "Type" : "AWS::EC2::TrafficMirrorFilterRule",
+            "Properties" : {
+                "Description" : "Mirror all TCP traffic to any location",
+                "DestinationCidrBlock" : "0.0.0.0/0",
+                "Protocol" : 6,
+                "RuleAction" : "accept",
+                "RuleNumber" : 100,
+                "SourceCidrBlock" : "0.0.0.0/0",
+                "TrafficDirection" : "egress",
+                "TrafficMirrorFilterId" : { "Ref": "ResurfaceMirrorFilter" }
+            }
+        },
+        "ResurfaceMirrorSession": {
+            "Type": "AWS::EC2::TrafficMirrorSession",
+            "Properties": {
+                "Description": "",
+                "NetworkInterfaceId": { "Ref": "NetworkInterfaceID" },
+                "TrafficMirrorTargetId": { "Ref": "ResurfaceMirrorTarget" },
+                "TrafficMirrorFilterId": { "Ref": "ResurfaceMirrorFilter" },
+                "SessionNumber": 1,
+                "VirtualNetworkId": { "Ref": "VirtualNetworkID" }
+            }
+        }
+    },
+    "Outputs": {
+        "VNI": {
+            "Value": { "Ref": "VirtualNetworkID" }
+        },
+        "MirrorTargetIP": {
+            "Value": { "Fn::GetAtt": [ "ResurfaceSnifferENI", "PrimaryPrivateIpAddress" ] }
+        }
+    }
+}
