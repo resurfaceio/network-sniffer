@@ -56,7 +56,7 @@
         "ResurfaceMirrorTarget": {
             "Type" : "AWS::EC2::TrafficMirrorTarget",
             "Properties" : {
-                "Description" : "",
+                "Description" : "Network interface that will receive mirrored traffic",
                 "NetworkInterfaceId" : { "Ref": "ResurfaceSnifferENI" }
             }
         },         
@@ -92,7 +92,6 @@
         "ResurfaceMirrorSession": {
             "Type": "AWS::EC2::TrafficMirrorSession",
             "Properties": {
-                "Description": "",
                 "NetworkInterfaceId": { "Ref": "NetworkInterfaceID" },
                 "TrafficMirrorTargetId": { "Ref": "ResurfaceMirrorTarget" },
                 "TrafficMirrorFilterId": { "Ref": "ResurfaceMirrorFilter" },
