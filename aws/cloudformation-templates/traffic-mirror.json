@@ -64,7 +64,7 @@
     "ResurfaceSGIngress": {
       "Type" : "AWS::EC2::SecurityGroupIngress",
       "Properties": {
-        "CidrIp": { "Ref": "ResurfaceCIDR" },
+        "CidrIp": { "Fn::Join": [ "/", [ { "Ref": "MirrorSourceIP" }, "32" ] ] },
         "Description" : "Enable UDP mirrored traffic",
         "FromPort" : 4789,
         "ToPort": 4789,
@@ -145,7 +145,7 @@
                 " local ",
                 { "Fn::GetAtt": [ "ResurfaceENI", "PrimaryPrivateIpAddress" ] },
                 " remote ",
-                { "Ref": "MirrorSourceIP"},
+                { "Ref": "MirrorSourceIP" },
                 " dev eth0 dstport 4789\"\n",
                 "sudo su root -c \"ip link set vx0 up\"\n",
                 "\n"
