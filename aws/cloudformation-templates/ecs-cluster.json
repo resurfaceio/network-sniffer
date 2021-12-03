@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Deploys Target, Filter and Session for VPC Traffic Mirroring",
+  "Description": "Deploys ECS Cluster containing a Resurface instance and a Network Sniffer instance to capture mirrored VPC traffic, as well as the corresponding EC2 instance",
   "Parameters": {
     "VPCID": {
       "Type": "AWS::EC2::VPC::Id",

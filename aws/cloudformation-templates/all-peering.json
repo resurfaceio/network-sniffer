@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Deploys Target, Filter and Session for VPC Traffic Mirroring",
+  "Description": "Deploys VPC, ECS Cluster, Mirror Session and corresponding Network resources",
   "Parameters": {
     "VPCID": {
       "Type": "AWS::EC2::VPC::Id",
