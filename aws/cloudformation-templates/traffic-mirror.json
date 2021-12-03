@@ -3,25 +3,29 @@
     "Description": "Deploys Target, Filter and Session for VPC Traffic Mirroring",
     "Parameters": {
         "VPCID": {
-            "Type": "AWS::EC2::VPC::Id",
-            "Description": "Select the VPC that corresponds to your EC2 instance."
+          "Type": "AWS::EC2::VPC::Id",
+          "Description": "Select the VPC that corresponds to your EC2 instance."
+        },
+        "SubnetID": {
+          "Type": "AWS::EC2::Subnet::Id",
+          "Description": "Select a subnet with a default route to an internet gateway"
         },
         "NetworkInterfaceID": {
-            "Type": "String",
-            "Description": "The ID of the network interface to mirror traffic from."
+          "Type": "String",
+          "Description": "The ID of the network interface to mirror traffic from."
         },
         "VirtualNetworkID": {
-            "Type": "Number",
-            "Description": "VXLAN ID for the Traffic Mirror session.",
-            "Default": 8864121
+          "Type": "Number",
+          "Description": "VXLAN ID for the Traffic Mirror session.",
+          "Default": 8864121
         },
         "AppPort": {
-            "Type": "String",
-            "Description": "Port to mirror traffic from."
+          "Type": "String",
+          "Description": "Port to mirror traffic from."
         },
         "ResurfaceCIDR": {
-            "Type": "String",
-            "Description": "CIDR for the Resurface Subnet"
+          "Type": "String",
+          "Description": "CIDR for the Resurface Subnet"
         },
         "ResurfaceRules": {
           "Type": "String",
@@ -33,8 +37,8 @@
           "Description": "Token used to connect to the Resurface Docker registry."
         },
         "ResurfaceEC2KeyPair": {
-            "Type": "AWS::EC2::KeyPair::KeyName",
-            "Description": "Key pair to connect to the Resurface EC2 instance using SSH"
+          "Type": "AWS::EC2::KeyPair::KeyName",
+          "Description": "Key pair to connect to the Resurface EC2 instance using SSH"
         }
     },
     "Resources": {
@@ -80,6 +84,38 @@
                 "SubnetId" : { "Ref": "ResurfaceSubnet" }
             }
         },
+        "ResurfaceEIP" : {
+          "Type" : "AWS::EC2::EIP",
+          "Properties" : { "Domain" : "vpc" }
+        },
+        "ResurfaceNAT": {
+          "Type": "AWS::EC2::NatGateway",
+          "Properties": {
+            "AllocationId" : { "Fn::GetAtt" : ["ResurfaceEIP", "AllocationId"]},
+            "SubnetId" : { "Ref": "SubnetID" }
+          }
+        },
+        "ResurfaceRouteTable": {
+          "Type": "AWS::EC2::RouteTable",
+          "Properties": {
+            "VpcId": { "Ref": "VPCID" }
+          }
+        },
+        "ResurfaceRouteTableAssoc": {
+          "Type":"AWS::EC2::SubnetRouteTableAssociation",
+          "Properties": {
+            "RouteTableId": { "Ref": "ResurfaceRouteTable" },
+            "SubnetId": { "Ref": "ResurfaceSubnet" }
+          }
+        },
+        "Route" : {
+          "Type" : "AWS::EC2::Route",
+          "Properties" : {
+            "RouteTableId" : { "Ref" : "ResurfaceRouteTable" },
+            "DestinationCidrBlock" : "0.0.0.0/0",
+            "NatGatewayId" : { "Ref" : "ResurfaceNAT" }
+          }
+       },
         "ResurfaceEC2InstanceProfile": {
           "Type": "AWS::IAM::InstanceProfile",
           "Properties": {
