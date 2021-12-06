@@ -12,15 +12,16 @@
     },
     "EC2NetworkInterfaceID": {
       "Type": "String",
-      "Description": "The ID of the network interface attached to the EC2 to mirror traffic from."
+      "Description": "The ID of the network interface attached to the EC2 to mirror traffic from"
     },
     "EC2Address": {
       "Type": "String",
-      "Description": "Enter the private IP of the EC2 to mirror traffic from."
+      "Description": "Enter the private IP of the EC2 to mirror traffic from"
     },
     "EC2AppPort": {
       "Type": "String",
-      "Description": "Port to mirror traffic from."
+      "Description": "Port to mirror traffic from",
+      "Default": "80"
     },
     "ResurfaceCIDRBlock": {
       "Type": "String",
@@ -94,21 +95,32 @@
       "Properties": {
         "MapPublicIpOnLaunch": "true",
         "CidrBlock": { "Fn::Join": [ "/", [ { "Fn::Select" : [ 0, { "Fn::Split" : [ "/", { "Ref": "ResurfaceCIDRBlock" } ] } ] }, "24" ] ] },
-        "VpcId": { "Ref": "VPCID" }
+        "VpcId": { "Ref": "ResurfaceVPC" }
       }
     },
     "ResurfaceSG": {
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
         "GroupDescription" : "Resurface Sniffer Security Group",
-        "VpcId" : { "Ref": "VPCID" }
+        "VpcId" : { "Ref": "ResurfaceVPC" }
       }
     },
     "ResurfaceSGIngress": {
       "Type" : "AWS::EC2::SecurityGroupIngress",
       "Properties": {
+        "CidrIp": "0.0.0.0/0",
+        "Description" : "Enable access to Resurface API Explorer",
+        "FromPort" : 7700,
+        "ToPort": 7700,
+        "GroupId" : { "Ref": "ResurfaceSG" },
+        "IpProtocol" : "tcp"
+      }
+    },
+    "ResurfaceSGIngressMirror": {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
         "CidrIp": { "Fn::Join": [ "/", [ { "Ref": "EC2Address" }, "32" ] ] },
-        "Description" : "Enable UDP mirrored traffic",
+        "Description" : "Allow UDP mirrored traffic",
         "FromPort" : 4789,
         "ToPort": 4789,
         "GroupId" : { "Ref": "ResurfaceSG" },
@@ -135,7 +147,7 @@
     "ResurfaceRouteTable": {
       "Type": "AWS::EC2::RouteTable",
       "Properties": {
-        "VpcId": { "Ref": "VPCID" }
+        "VpcId": { "Ref": "ReusrfaceVPC" }
       }
     },
     "Route" : {
