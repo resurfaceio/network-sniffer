@@ -6,6 +6,7 @@
       "Type": "String",
       "Description": "Enter a CIDR to create a new VPC for Resurface. Must not overlap with the CIDR block of the selected VPC",
       "AllowedPattern": "^[0-9]{0,3}\\.[0-9]{0,3}\\.[0-9]{0,3}\\.[0-9]{0,3}\\/[0-3]?[0-9]$",
+      "Default": "52.177.0.0/16",
       "ConstraintDescription": "must be a valid CIDR block (xxx.xxx.xxx.xxx/xx)"
     },
     "VPCID": {

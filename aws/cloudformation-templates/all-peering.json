@@ -1,35 +1,33 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Deploys VPC, ECS Cluster, Mirror Session and corresponding Network resources",
+  "Description": "Deploys Target, Filter and Session for VPC Traffic Mirroring",
   "Parameters": {
     "VPCID": {
       "Type": "AWS::EC2::VPC::Id",
-      "Description": "Select the VPC that corresponds to your EC2 instance."
+      "Description": "Select the VPC that corresponds to your EC2 instance"
     },
-    "InternetGatewayID": {
+    "VPCRouteTableID": {
       "Type": "String",
-      "Description": "Enter the ID of you VPC's Intenet Gateway. It will be used by the Resurface Subnet."
+      "Description": "Enter the ID of the Route Table associated with the subnet in which your EC2 instance resides"
     },
-    "NetworkInterfaceID": {
+    "EC2NetworkInterfaceID": {
       "Type": "String",
-      "Description": "The ID of the network interface to mirror traffic from."
+      "Description": "The ID of the network interface attached to the EC2 to mirror traffic from."
     },
-    "MirrorSourceIP": {
+    "EC2Address": {
       "Type": "String",
       "Description": "Enter the private IP of the EC2 to mirror traffic from."
     },
-    "VirtualNetworkID": {
-      "Type": "Number",
-      "Description": "VXLAN ID for the Traffic Mirror session.",
-      "Default": 8864121
-    },
-    "AppPort": {
+    "EC2AppPort": {
       "Type": "String",
       "Description": "Port to mirror traffic from."
     },
-    "ResurfaceCIDR": {
+    "ResurfaceCIDRBlock": {
       "Type": "String",
-      "Description": "CIDR for the Resurface Subnet."
+      "Description": "Enter a CIDR to create a new VPC for Resurface. Must not overlap with the CIDR block of the selected VPC",
+      "AllowedPattern": "^[0-9]{0,3}\\.[0-9]{0,3}\\.[0-9]{0,3}\\.[0-9]{0,3}\\/[0-3]?[0-9]$",
+      "Default": "52.177.0.0/16",
+      "ConstraintDescription": "must be a valid CIDR block (xxx.xxx.xxx.xxx/xx)"
     },
     "ResurfaceRules": {
       "Type": "String",
@@ -38,19 +36,64 @@
     },
     "ResurfaceEntitlementToken": {
       "Type": "String",
-      "Description": "Token used to connect to the Resurface Docker registry."
+      "Description": "Enter the Resurface Entitlement Token sent via email. The token is used to connect to the Resurface Docker registry"
     },
-    "ResurfaceEC2KeyPair": {
+    "ResurfaceKeyPair": {
       "Type": "AWS::EC2::KeyPair::KeyName",
-      "Description": "Key pair to connect to the Resurface EC2 instance using SSH."
+      "Description": "Select an existing EC2 Key Pair to connect to the Resurface EC2 instance using SSH"
+    },
+    "MirrorSessionNumber": {
+      "Type": "Number",
+      "Description": "Determines the order in which traffic mirror sessions are evaluated (1 is highest priority). Modify if you have mutiple traffic mirroring sessions only",
+      "MinValue": 1,
+      "MaxValue": 32766,
+      "Default": 1
+    },
+    "MirrorVirtualNetworkID": {
+      "Type": "Number",
+      "Description": "VXLAN Network Identifier (VNI) used to idetify VXLAN segments in mirrored packets. Modify if you have another traffic mirroring session that uses the default VNI value",
+      "Default": 8864121
     }
   },
   "Resources": {
+    "ResurfaceVPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": { "Ref": "ResurfaceCIDRBlock" },
+        "EnableDnsHostnames": "true",
+        "EnableDnsSupport": "true"
+      }
+    },
+    "ResurfaceIG": {
+      "Type": "AWS::EC2::InternetGateway"
+    },
+    "ResurfaceVPCGatewayAttachment": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "InternetGatewayId": { "Ref": "ResurfaceIG" },
+        "VpcId": { "Ref": "ResurfaceVPC" }
+      }
+    },
+    "ResurfaceVPCPeeringConnection": {
+      "Type" : "AWS::EC2::VPCPeeringConnection",
+      "Properties" : {
+        "PeerVpcId" : { "Ref": "ResurfaceVPC" },
+        "VpcId" : { "Ref": "VPCID" }
+      }
+    },
+    "RouteToResurfaceVPC": {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "DestinationCidrBlock" : { "Ref": "ResurfaceCIDRBlock" },
+        "RouteTableId" : { "Ref": "VPCRouteTableID" },
+        "VpcPeeringConnectionId" : { "Ref": "ResurfaceVPCPeeringConnection" }
+      }
+    },
     "ResurfaceSubnet": {
       "Type": "AWS::EC2::Subnet",
       "Properties": {
         "MapPublicIpOnLaunch": "true",
-        "CidrBlock": { "Ref": "ResurfaceCIDR" },
+        "CidrBlock": { "Fn::Join": [ "/", [ { "Fn::Select" : [ 0, { "Fn::Split" : [ "/", { "Ref": "ResurfaceCIDRBlock" } ] } ] }, "24" ] ] },
         "VpcId": { "Ref": "VPCID" }
       }
     },
@@ -64,7 +107,7 @@
     "ResurfaceSGIngress": {
       "Type" : "AWS::EC2::SecurityGroupIngress",
       "Properties": {
-        "CidrIp": { "Fn::Join": [ "/", [ { "Ref": "MirrorSourceIP" }, "32" ] ] },
+        "CidrIp": { "Fn::Join": [ "/", [ { "Ref": "EC2Address" }, "32" ] ] },
         "Description" : "Enable UDP mirrored traffic",
         "FromPort" : 4789,
         "ToPort": 4789,
@@ -89,10 +132,6 @@
         "SubnetId" : { "Ref": "ResurfaceSubnet" }
       }
     },
-    "ResurfaceEIP" : {
-      "Type" : "AWS::EC2::EIP",
-      "Properties" : { "Domain" : "vpc" }
-    },
     "ResurfaceRouteTable": {
       "Type": "AWS::EC2::RouteTable",
       "Properties": {
@@ -104,7 +143,7 @@
       "Properties" : {
         "RouteTableId" : { "Ref" : "ResurfaceRouteTable" },
         "DestinationCidrBlock" : "0.0.0.0/0",
-        "GatewayId" : { "Ref" : "InternetGatewayID" }
+        "GatewayId" : { "Ref" : "ResurfaceIG" }
       }
      },
      "ResurfaceRouteTableAssoc": {
@@ -126,7 +165,7 @@
         "IamInstanceProfile" : { "Ref": "ResurfaceEC2InstanceProfile" },
         "ImageId": "ami-04e6179c63d17513d",
         "InstanceType" : "t3.2xlarge",
-        "KeyName": { "Ref": "ResurfaceEC2KeyPair" },
+        "KeyName": { "Ref": "ResurfaceKeyPair" },
         "NetworkInterfaces": [{
             "DeviceIndex": "0",
             "NetworkInterfaceId": { "Ref": "ResurfaceENI" }
@@ -141,11 +180,11 @@
                 " >> /etc/ecs/ecs.config\n",
                 "\n",
                 "sudo su root -c \"ip link add vx0 type vxlan id ",
-                { "Ref": "VirtualNetworkID" },
+                { "Ref": "MirrorVirtualNetworkID" },
                 " local ",
                 { "Fn::GetAtt": [ "ResurfaceENI", "PrimaryPrivateIpAddress" ] },
                 " remote ",
-                { "Ref": "MirrorSourceIP" },
+                { "Ref": "EC2Address" },
                 " dev eth0 dstport 4789\"\n",
                 "sudo su root -c \"ip link set vx0 up\"\n",
                 "\n"
@@ -296,7 +335,7 @@
               },
               {
                 "Name": "APP_PORT",
-                "Value": { "Ref": "AppPort" }
+                "Value": { "Ref": "EC2AppPort" }
               },
               {
                 "Name": "VPC_MIRROR_DEVICE",
@@ -363,17 +402,17 @@
     "ResurfaceMirrorSession": {
       "Type": "AWS::EC2::TrafficMirrorSession",
       "Properties": {
-        "NetworkInterfaceId": { "Ref": "NetworkInterfaceID" },
+        "NetworkInterfaceId": { "Ref": "EC2NetworkInterfaceID" },
         "TrafficMirrorTargetId": { "Ref": "ResurfaceMirrorTarget" },
         "TrafficMirrorFilterId": { "Ref": "ResurfaceMirrorFilter" },
-        "SessionNumber": 1,
-        "VirtualNetworkId": { "Ref": "VirtualNetworkID" }
+        "SessionNumber": { "Ref": "MirrorSessionNumber" },
+        "VirtualNetworkId": { "Ref": "MirrorVirtualNetworkID" }
       }
     }
   },
   "Outputs": {
     "VNI": {
-      "Value": { "Ref": "VirtualNetworkID" }
+      "Value": { "Ref": "MirrorVirtualNetworkID" }
     },
     "MirrorTargetIP": {
       "Value": { "Fn::GetAtt": [ "ResurfaceENI", "PrimaryPrivateIpAddress" ] }

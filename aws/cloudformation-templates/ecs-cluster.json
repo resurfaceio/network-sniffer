@@ -28,6 +28,7 @@
       "Type": "String",
       "Description": "Enter a CIDR for the Resurface Subnet. Must be a subset of the selected VPC CIDR block. Must not overlap with the CIDR blocks of other subnets in the selected VPC",
       "AllowedPattern": "^[0-9]{0,3}\\.[0-9]{0,3}\\.[0-9]{0,3}\\.[0-9]{0,3}\\/[0-3]?[0-9]$",
+      "Default": "52.177.0.0/24",
       "ConstraintDescription": "must be a valid CIDR block (xxx.xxx.xxx.xxx/xx)"
     },
     "ResurfaceEC2KeyPair": {
