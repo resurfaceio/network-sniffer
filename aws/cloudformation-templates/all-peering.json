@@ -12,15 +12,15 @@
     },
     "EC2NetworkInterfaceID": {
       "Type": "String",
-      "Description": "The ID of the network interface attached to the EC2 to mirror traffic from"
+      "Description": "The ID of the network interface attached to the EC2 instance to mirror traffic from"
     },
     "EC2Address": {
       "Type": "String",
-      "Description": "Enter the private IP of the EC2 to mirror traffic from"
+      "Description": "Enter the private IP of the EC2 instance to mirror traffic from"
     },
     "EC2AppPort": {
       "Type": "String",
-      "Description": "Port to mirror traffic from",
+      "Description": "Port on the EC2 instance to mirror traffic from",
       "Default": "80"
     },
     "ResurfaceCIDRBlock": {
@@ -147,7 +147,7 @@
     "ResurfaceRouteTable": {
       "Type": "AWS::EC2::RouteTable",
       "Properties": {
-        "VpcId": { "Ref": "ReusrfaceVPC" }
+        "VpcId": { "Ref": "ResurfaceVPC" }
       }
     },
     "Route" : {
@@ -423,11 +423,14 @@
     }
   },
   "Outputs": {
-    "VNI": {
-      "Value": { "Ref": "MirrorVirtualNetworkID" }
+    "Resurface API Explorer URL": {
+      "Value": { "Fn::Join": [":", [ { "Fn::GetAtt": [ "ResurfaceEC2Instance", "PublicDnsName" ] }, "7700" ] ] }
     },
-    "MirrorTargetIP": {
-      "Value": { "Fn::GetAtt": [ "ResurfaceENI", "PrimaryPrivateIpAddress" ] }
+    "ResurfaceEC2PrivateIP": {
+      "Value": { "Fn::GetAtt": [ "ResurfaceEC2Instance", "PrivateIp" ] }
+    },
+    "ResurfaceEC2PublicIP": {
+      "Value": { "Fn::GetAtt": [ "ResurfaceEC2Instance", "PrivateIp" ] }
     }
   }
 }
