@@ -423,7 +423,7 @@
     }
   },
   "Outputs": {
-    "Resurface API Explorer URL": {
+    "ResurfaceAPIExplorerURL": {
       "Value": { "Fn::Join": [":", [ { "Fn::GetAtt": [ "ResurfaceEC2Instance", "PublicDnsName" ] }, "7700" ] ] }
     },
     "ResurfaceEC2PrivateIP": {
