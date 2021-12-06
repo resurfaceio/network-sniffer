@@ -430,7 +430,7 @@
       "Value": { "Fn::GetAtt": [ "ResurfaceEC2Instance", "PrivateIp" ] }
     },
     "ResurfaceEC2PublicIP": {
-      "Value": { "Fn::GetAtt": [ "ResurfaceEC2Instance", "PrivateIp" ] }
+      "Value": { "Fn::GetAtt": [ "ResurfaceEC2Instance", "PublicIp" ] }
     }
   }
 }
