@@ -2,15 +2,14 @@ version: "3.4"
 
 services:
   resurface:
-    image: resurfaceio/resurface:2.3.1
+    image: docker.resurface.io/release/resurface:3.0.34
     container_name: resurface
     ports:
-      - 4000:4000
-      - 4001:4001
-      - 4002:4002
+      - 7700:7700
+      - 7701:7701
   
   sniffer:
-    image: goreplay-resurface
-    container_name: sniffer
+    image: docker.resurface.io/release/network-sniffer:1.0.1
+    container_name: resurface-sniffer
     network_mode: "host"
     env_file: ./src/.env
