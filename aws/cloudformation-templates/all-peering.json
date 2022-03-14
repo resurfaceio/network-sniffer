@@ -168,7 +168,7 @@
     "ResurfaceEC2InstanceProfile": {
       "Type": "AWS::IAM::InstanceProfile",
       "Properties": {
-        "Roles": [ { "Ref": "ECSTaskExecutionRole" } ]
+        "Roles": [ { "Ref": "ResurfaceRole" } ]
       }
     },
     "ResurfaceEC2Instance": {
@@ -220,10 +220,10 @@
         }
       }
     },
-    "ECSTaskExecutionRole": {
+    "ResurfaceRole": {
       "Type": "AWS::IAM::Role",
       "Properties": {
-        "RoleName": "ECSTaskExecutionRole",
+        "RoleName": "ResurfaceRole",
         "AssumeRolePolicyDocument": {
           "Version": "2012-10-17",
           "Statement": [
@@ -356,7 +356,7 @@
             ]
           }
         ],
-        "ExecutionRoleArn": { "Fn::GetAtt":  [ "ECSTaskExecutionRole", "Arn" ] },
+        "ExecutionRoleArn": { "Fn::GetAtt":  [ "ResurfaceRole", "Arn" ] },
         "RequiresCompatibilities": [ "EC2" ],
         "NetworkMode": "host",
         "Cpu": 5120,
