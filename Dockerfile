@@ -5,6 +5,6 @@ WORKDIR /go/goreplay
 ARG TARGETOS TARGETARCH GORVER
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /out/gor -ldflags "-extldflags=-static -X main.VERSION=$GORVER" .
 
-FROM alpine:3.15.5
+FROM alpine:3.16
 COPY --from=build /out/gor /bin
 ENTRYPOINT gor ${K8S_INPUT:---input-raw $VPC_MIRROR_DEVICE:$APP_PORT --input-raw-bpf-filter "(dst port $APP_PORT) or (src port $APP_PORT)"} --input-raw-track-response  --output-resurface $USAGE_LOGGERS_URL --output-resurface-rules "$(echo -e $USAGE_LOGGERS_RULES)"
