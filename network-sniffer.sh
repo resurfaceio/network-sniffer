@@ -53,7 +53,7 @@ echo -e "\nSTEP 7/9: Bootstrap buildx builder"
 docker buildx inspect --bootstrap --builder multiremote
 
 echo -e "\nSTEP 8/9: Build multi-platform image"
-#docker buildx build --builder multiremote --push -t resurfaceio/network-sniffer:$1 --build-arg GORVER=$2 --platform linux/amd64,linux/arm64  .
+docker buildx build --builder multiremote --push -t resurfaceio/network-sniffer:$1 --build-arg GORVER=$2 --platform linux/amd64,linux/arm64  .
 
 echo -e "\nSTEP 9/9: Remove builder and stop EC2 instances (will check status until both are stopped. Ctrl+C if any machine does not reach stopped status)"
 docker buildx prune --builder multiremote -f && docker buildx rm multiremote
