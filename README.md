@@ -20,26 +20,49 @@ Capture detailed API calls from network traffic to your own [system of record](h
 Resurface uses [GoReplay](https://github.com/resurfaceio/goreplay) to capture HTTP traffic directly from network devices in userspace. Think `tcpdump` or Wireshark but without having to go through any of the packet reassembly or parsing process yourself.
 
 We offer two main alternatives for running the sniffer:
-- [Sidecar container](#sidecar-container) (Linux only)
-- [Run binary directly on your host machine](#direct-approach-option)
+- [Run network-sniffer container](#network-sniffer-container) (Linux only)
+- [Run binary directly on your host machine](#direct-approach)
 
-### Sidecar container
+## The `network-sniffer` container
 
-The `network-sniffer` application runs as an independent containerized application. This option works great when orchestrating different containerized applications. In this example, we use `docker-compose` but you can also use [Kubernetes](https://resurface.io/docs#sniffer-daemonset), or any other orchestration tool.
+Our sniffer runs as an independent containerized application. It captures packets from network interfaces, reassembles them, parses both HTTP request and response, packages the entire API calls, and sends it to your Resurface DB instance.
 
-#### Building the image
+After modifying the `.env` file with the required [environment variables](#environment-variables), just run the following docker command in the host machine:
+
+```bash
+docker run -d --name netsniffer --env-file .env --network host resurfaceio/network-sniffer:1.2.3
+```
+
+The `--network host` option must be specified in to capture traffic from other containers (or non-containerized apps) running in the machine.
+
+### Example: Demo app with network-sniffer as sidecar
+
+The `network-sniffer` container option works great when orchestrating different applications. In this example, we use `docker-compose` but you can also use [Kubernetes](https://resurface.io/docs#sniffer-daemonset), or any other orchestration tool.
+
+#### (Optional) Building the image
+
+The `resurfaceio/network-sniffer` multiplatform image is built and maintained by Resurface. However, if you want you can also build your own image using the binary file that corresponds to your machine
 
 - Clone this repo
-- `cd` into the directory where you cloned it
+    ```bash
+    git clone https://github.com/resurfaceio/network-sniffer.git
+    cd network-sniffer
+    ```
+- Download the binary that corresponds to your architecture and operating system
+    ```bash
+    wget ...
+    ```
 - Run `docker build -t network-sniffer .`
 
-#### Running the containers
+### Running the containers
 
-- Build the image
+- Pull (or build) the image
 - Modify the `.env` file with the required [environment variables](#environment-variables) accordingly.
 - Run `docker-compose up`
 
-### Direct approach option
+
+
+### Direct approach
 
 This option allows you to run the binary directly on your host machine. Choose this option if your host machine isn't running Linux.
 
@@ -99,7 +122,7 @@ All capture integrations by Resurface use two main environment variables:
 
 The `network sniffer` application uses two additional variables:
 
-- `APP_PORTS` is a comma-separated list of integer values that correspond to the ports where your applications are being served in the host machine.
+- `APP_PORT` is a comma-separated list of integer values that correspond to the ports where your applications are being served in the host machine.
 - `NET_DEVICE` corresponds to a specific network interface to capture packets from. When not set (or set to an empty string), the application captures from all available interfaces. You can get a list of all the available interfaces with the `ip a` (unix) or `ipconfig` (Windows) commands.
 
 ## VPC mirroring
