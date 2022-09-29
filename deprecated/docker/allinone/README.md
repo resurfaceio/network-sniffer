@@ -5,11 +5,11 @@ GoReplay runs alongside Resurface in the same container. This option works great
 #### Building the image
 - Clone this repo
 - `cd` into this directory
-- Run `docker build -t network-sniffer:allinone -f Dockerfile.allinone ../..`
+- Run `docker build -t network-sniffer:allinone -f Dockerfile.allinone .`
 
 #### Running the container
 - Build the image
-- Run `docker run -d --name netsniffer --network host --env-file ../../src/.env network-sniffer:allinone`
+- Run `docker run -d --name netsniffer --network host --env-file ./src/.env network-sniffer:allinone`
 
 #### Working with the network sniffer
 The GoReplay application does not autostart by default. Instead you can start and stop it when you need it, like this:
@@ -21,7 +21,7 @@ The GoReplay application does not autostart by default. Instead you can start an
 
 Resurface uses two main environment variables:
 
-- `USAGE_LOGGERS_URL` stores the Resurface database URL, which by default should be `http://localhost:4001/message`
+- `USAGE_LOGGERS_URL` stores the Resurface database URL, which by default should be `http://localhost:7701/message`
 - `USAGE_LOGGERS_RULES` stores a set of rules used to filter sensitive info when logging API calls. [Learn more](#protecting-user-privacy)
 
 In addition, the `APP_PORT` environment variable tells the network sniffer where to listen in the host machine, and `VPC_MIRROR_DEVICE` corresponds to a virtual VXLAN interface for [VPC mirroring](#vpc-mirroring).
