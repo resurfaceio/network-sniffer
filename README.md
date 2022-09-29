@@ -59,9 +59,9 @@ By default, Windows doesn't support packet capture like Unix systems do. In orde
     ```bash
     wget https://github.com/resurfaceio/goreplay/tree/master/bin/gor-resurface_mac.tar.gz
     ```
-    Windows
+    Windows (Powershell)
     ```bash
-    wget https://github.com/resurfaceio/goreplay/tree/master/bin/gor-resurface_windows.zip
+    Invoke-WebRequest https://github.com/resurfaceio/goreplay/tree/master/bin/gor-resurface_windows.zip -OutFile C:\gor-resurface_windows.zip
     ```
 - Extract the `gor` binary
     ```bash
@@ -91,13 +91,16 @@ By default, Windows doesn't support packet capture like Unix systems do. In orde
 
 All capture integrations by Resurface use two main environment variables:
 
-- `USAGE_LOGGERS_URL` stores [the Resurface capture URL](https://resurface.io/docs#getting-capture-url), which by default should be `http://localhost:7701/message`
+- `USAGE_LOGGERS_URL` stores [the Resurface capture URL](https://resurface.io/docs#getting-capture-url), which by default should be
+    ```
+    http://localhost:7701/message
+    ```
 - `USAGE_LOGGERS_RULES` stores a set of rules used to filter sensitive info when logging API calls. [Learn more](#protecting-user-privacy)
 
 The `network sniffer` application uses two additional variables:
 
 - `APP_PORTS` is a comma-separated list of integer values that correspond to the ports where your applications are being served in the host machine.
-- `NET_DEVICE` corresponds to a specific network interface to capture packets from. You can get a list of all the available interfaces with the `ip a ` command. When not set, the application captures from all available interfaces.
+- `NET_DEVICE` corresponds to a specific network interface to capture packets from. When not set (or set to an empty string), the application captures from all available interfaces. You can get a list of all the available interfaces with the `ip a` (unix) or `ipconfig` (Windows) commands.
 
 ## VPC mirroring
 
