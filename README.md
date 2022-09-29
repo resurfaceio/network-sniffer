@@ -1,76 +1,103 @@
 # resurfaceio-network-sniffer
-Log detailed API calls from network traffic with GoReplay to your own [system of record](https://resurface.io).
+
+Capture detailed API calls from network traffic to your own [system of record](https://resurface.io).
 
 ## Contents
+
 - [Requirements](#requirements)
 - [Capturing network traffic](#capturing-network-traffic)
 - [Environment variables](#environment-variables)
 - [VPC mirroring](#vpc-mirroring)
 - [Protecting User Privacy](#protecting-user-privacy)
 
-
 ## Requirements
+
 - docker
 - [Resurface](https://resurface.io/installation) (free docker container)
 
 ## Capturing network traffic
-Resurface uses [GoReplay](https://goreplay.org/) to log HTTP traffic from the network. We offer different alternatives to accomplish this:
-- [All-in-one container](#all-in-one-container) (Linux only)
+
+Resurface uses [GoReplay](https://github.com/resurfaceio/goreplay) to capture HTTP traffic directly from network devices in userspace. Think `tcpdump` or Wireshark but without having to go through any of the packet reassembly or parsing process yourself.
+
+We offer two main alternatives for running the sniffer:
 - [Sidecar container](#sidecar-container) (Linux only)
-- [Run GoReplay directly on your host machine](#direct-approach-option)
-
-### All-in-one container
-GoReplay runs alongside Resurface in the same container. This option works great for demos, dev environments, and single-node solutions but it might not provide the flexibility needed in a production environment.
-
-#### Building the image
-- Clone this repo
-- `cd` into the directory where you cloned it
-- Run `docker build -t resurface:gor .`
-
-#### Running the container
-- Build the image
-- Run `docker run -d --name resurface-gor --network host resurface:gor`
-
-#### Working with the network sniffer
-The GoReplay application does not autostart by default. Instead you can start and stop it when you need it, like this:
-- **Start**: `docker exec resurface-gor sniffer on`
-- **Stop**: `docker exec resurface-gor sniffer off`
-- **Status**: `docker exec resurface-gor sniffer`
+- [Run binary directly on your host machine](#direct-approach-option)
 
 ### Sidecar container
-GoReplay runs as an independent containerized application. This option works great when orchestrating different containerized applications. In this example, we use `docker-compose` but you can use any other orchestration tool.
+
+The `network-sniffer` application runs as an independent containerized application. This option works great when orchestrating different containerized applications. In this example, we use `docker-compose` but you can also use [Kubernetes](https://resurface.io/docs#sniffer-daemonset), or any other orchestration tool.
 
 #### Building the image
+
 - Clone this repo
 - `cd` into the directory where you cloned it
-- Run `docker build -t goreplay-resurface -f Dockerfile.sidecar .`
+- Run `docker build -t network-sniffer .`
 
 #### Running the containers
+
 - Build the image
 - Modify the `.env` file with the required [environment variables](#environment-variables) accordingly.
 - Run `docker-compose up`
 
 ### Direct approach option
-This option allows you to run the GoReplay binary directly on your host machine. Choose this option if your host machine isn't running Linux.
+
+This option allows you to run the binary directly on your host machine. Choose this option if your host machine isn't running Linux.
 
 #### Install npcap (Windows only)
+
 By default, Windows doesn't support packet capture like Unix systems do. In order to perform this operation, a packet capture library like [npcap](https://nmap.org/npcap/) must be installed first.
 
 #### Download the network sniffer application
-- Download the tarball or binary file that corresponds to you system from the [bin directory](https://github.com/resurfaceio/goreplay/tree/master/bin).
-- Extract or install accordingly.
+
+- Download the tarball or binary file that corresponds to you system from the [bin directory](https://github.com/resurfaceio/goreplay/tree/master/bin)
+
+    Linux
+    ```bash
+    wget https://github.com/resurfaceio/goreplay/tree/master/bin/gor-resurface_x64.tar.gz
+    ```
+    macOS
+    ```bash
+    wget https://github.com/resurfaceio/goreplay/tree/master/bin/gor-resurface_mac.tar.gz
+    ```
+    Windows
+    ```bash
+    wget https://github.com/resurfaceio/goreplay/tree/master/bin/gor-resurface_windows.zip
+    ```
+- Extract the `gor` binary
+    ```bash
+    tar -xzf gor-resurface_x64.tar.gz  # linux
+    ```
+    ```bash
+    tar -xzf gor-resurface_mac.tar.gz  # macOS
+    ```
+    ```bash
+    Expand-Archive gor-resurface_windows.zip  # Windows
+    ```
+- Modify permissions if necessary
+    ```bash
+    chmod +x ./gor
+    ```
 
 #### Running the network sniffer application
-- Run `gor --input-raw $VPC_MIRROR_DEVICE:$APP_PORT --input-raw-track-response --input-raw-bpf-filter "(dst port $APP_PORT) or (src port $APP_PORT)" --output-resurface $USAGE_LOGGERS_URL --output-resurface-rules $USAGE_LOGGER_RULES`
+
+- Set all the required [environment variables](#environment-variables) accordingly.
+- Run the following command
+
+    ```bash
+    ./gor --input-raw $NET_DEVICE:$APP_PORTS --input-raw-track-response --input-raw-bpf-filter "(dst port $APP_PORT) or (src port $APP_PORT)" --output-resurface $USAGE_LOGGERS_URL --output-resurface-rules $USAGE_LOGGER_RULES
+    ```
 
 ## Environment variables
 
-Resurface uses two main environment variables:
+All capture integrations by Resurface use two main environment variables:
 
-- `USAGE_LOGGERS_URL` stores the Resurface database URL, which by default should be `http://localhost:4001/message`
+- `USAGE_LOGGERS_URL` stores [the Resurface capture URL](https://resurface.io/docs#getting-capture-url), which by default should be `http://localhost:7701/message`
 - `USAGE_LOGGERS_RULES` stores a set of rules used to filter sensitive info when logging API calls. [Learn more](#protecting-user-privacy)
 
-In addition, the `APP_PORT` environment variable tells the network sniffer where to listen in the host machine, and `VPC_MIRROR_DEVICE` corresponds to a virtual VXLAN interface for [VPC mirroring](#vpc-mirroring).
+The `network sniffer` application uses two additional variables:
+
+- `APP_PORTS` is a comma-separated list of integer values that correspond to the ports where your applications are being served in the host machine.
+- `NET_DEVICE` corresponds to a specific network interface to capture packets from. You can get a list of all the available interfaces with the `ip a ` command. When not set, the application captures from all available interfaces.
 
 ## VPC mirroring
 
@@ -97,4 +124,4 @@ but logging rules are easily customized to meet the needs of any application.
 <a href="https://resurface.io/logging-rules">Logging rules documentation</a>
 
 ---
-<small>&copy; 2016-2021 <a href="https://resurface.io">Resurface Labs Inc.</a></small>
+<small>&copy; 2016-2022 <a href="https://resurface.io">Resurface Labs Inc.</a></small>

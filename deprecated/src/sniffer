@@ -1,0 +1,10 @@
+#!/bin/sh
+if [ $# -eq 0 ]; then
+    supervisorctl status goreplay
+elif [ $1 = "on" ]; then
+    supervisorctl start goreplay
+elif [ $1 = "off" ]; then
+    supervisorctl stop goreplay
+else
+    echo "Network sniffer: Invalid option."
+fi

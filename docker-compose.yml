@@ -1,15 +1,23 @@
-version: "3.4"
+version: "3.8"
 
 services:
   resurface:
-    image: docker.resurface.io/release/resurface:3.0.34
+    image: resurfaceio/resurface:3.2.6
     container_name: resurface
     ports:
       - 7700:7700
       - 7701:7701
+    deploy:
+      resources:
+        reservations:
+          cpus: '2'
+          memory: 6G
+        limits:
+          cpus: '4'
+          memory: 8G
   
   sniffer:
-    image: docker.resurface.io/release/network-sniffer:1.0.1
+    image: network-sniffer
     container_name: resurface-sniffer
     network_mode: "host"
-    env_file: ./src/.env
+    env_file: .env
