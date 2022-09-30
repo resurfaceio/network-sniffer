@@ -23,9 +23,9 @@ We offer two main alternatives for running the sniffer:
 - [Run network-sniffer container](#network-sniffer-container) (Linux only)
 - [Run binary directly on your host machine](#direct-approach)
 
-## The `network-sniffer` container
+## Running the `network-sniffer` container
 
-Our sniffer runs as an independent containerized application. It captures packets from network interfaces, reassembles them, parses both HTTP request and response, packages the entire API calls, and sends it to your Resurface DB instance.
+Our sniffer runs as an independent containerized application. It captures packets from network interfaces, reassembles them, parses both HTTP request and response, packages the entire API calls, and sends it to your Resurface DB instance automatically.
 
 After modifying the `.env` file with the required [environment variables](#environment-variables), just run the following docker command in the host machine:
 
@@ -41,7 +41,7 @@ The `network-sniffer` container option works great when orchestrating different 
 
 #### (Optional) Building the image
 
-The `resurfaceio/network-sniffer` multiplatform image is built and maintained by Resurface. However, if you want you can also build your own image using the binary file that corresponds to your machine
+The `resurfaceio/network-sniffer` multiplatform image is built and maintained by Resurface ([more info](./buildx/README.md)). However, if you want you can also build your own image using the binary file that corresponds to your machine
 
 - Clone this repo
     ```bash
@@ -58,13 +58,26 @@ The `resurfaceio/network-sniffer` multiplatform image is built and maintained by
 
 - Pull (or build) the image
 - Modify the `.env` file with the required [environment variables](#environment-variables) accordingly.
-- Run `docker-compose up`
+- Run `docker-compose -d up` (or `docker-compose -d --profile local up` if youve built the `network-sniffer` image yourself)
 
+### Using the sniffer
 
+- Go to http://localhost:7700 and log in to your Resurface instance
+- Perform a few API calls to the `httpbin` service
+    ```bash
+    curl http://localhost:80/json
+    ```
+- See the API calls flowing into the Resurface UI
 
-### Direct approach
+### Stopping the containers
 
-This option allows you to run the binary directly on your host machine. Choose this option if your host machine isn't running Linux.
+```bash
+docker compose down --volumes --remove-orphans
+```
+
+## Running the sniffer binary file
+
+This option allows you to run the binary file directly on your host machine. Choose this option if your host machine isn't running Linux.
 
 #### Install npcap (Windows only)
 
@@ -72,12 +85,8 @@ By default, Windows doesn't support packet capture like Unix systems do. In orde
 
 #### Download the network sniffer application
 
-- Download the tarball or binary file that corresponds to you system from the [bin directory](https://github.com/resurfaceio/goreplay/tree/master/bin)
+- Download the tarball, zip, or binary file that corresponds to you system from the [bin directory](https://github.com/resurfaceio/goreplay/tree/master/bin)
 
-    Linux
-    ```bash
-    wget https://github.com/resurfaceio/goreplay/tree/master/bin/gor-resurface_x64.tar.gz
-    ```
     macOS
     ```bash
     wget https://github.com/resurfaceio/goreplay/tree/master/bin/gor-resurface_mac.tar.gz
@@ -87,9 +96,6 @@ By default, Windows doesn't support packet capture like Unix systems do. In orde
     Invoke-WebRequest https://github.com/resurfaceio/goreplay/tree/master/bin/gor-resurface_windows.zip -OutFile C:\gor-resurface_windows.zip
     ```
 - Extract the `gor` binary
-    ```bash
-    tar -xzf gor-resurface_x64.tar.gz  # linux
-    ```
     ```bash
     tar -xzf gor-resurface_mac.tar.gz  # macOS
     ```
@@ -107,7 +113,7 @@ By default, Windows doesn't support packet capture like Unix systems do. In orde
 - Run the following command
 
     ```bash
-    ./gor --input-raw $NET_DEVICE:$APP_PORTS --input-raw-track-response --input-raw-bpf-filter "(dst port $APP_PORT) or (src port $APP_PORT)" --output-resurface $USAGE_LOGGERS_URL --output-resurface-rules $USAGE_LOGGER_RULES
+    ./gor --input-raw $NET_DEVICE:$APP_PORTS --input-raw-track-response --input-raw-bpf-filter "(dst port $(echo $APP_PORTS | sed 's/,/ or /g')) or (src port $(echo $APP_PORTS | sed 's/,/ or /g'))" --output-resurface $USAGE_LOGGERS_URL --output-resurface-rules $USAGE_LOGGER_RULES
     ```
 
 ## Environment variables
@@ -120,10 +126,12 @@ All capture integrations by Resurface use two main environment variables:
     ```
 - `USAGE_LOGGERS_RULES` stores a set of rules used to filter sensitive info when logging API calls. [Learn more](#protecting-user-privacy)
 
-The `network sniffer` application uses two additional variables:
+The `network-sniffer` application uses two additional variables:
 
-- `APP_PORT` is a comma-separated list of integer values that correspond to the ports where your applications are being served in the host machine.
+- `APP_PORTS` is a comma-separated list of integer values that correspond to the ports where your applications are being served in the host machine.
 - `NET_DEVICE` corresponds to a specific network interface to capture packets from. When not set (or set to an empty string), the application captures from all available interfaces. You can get a list of all the available interfaces with the `ip a` (unix) or `ipconfig` (Windows) commands.
+
+The `COMPOSE_PROFILES` environment variable sets the profile to use when no `--profle` option is passed when running `docker-compose -d up`
 
 ## VPC mirroring
 
