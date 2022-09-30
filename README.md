@@ -58,7 +58,7 @@ The `resurfaceio/network-sniffer` multiplatform image is built and maintained by
 
 - Pull (or build) the image
 - Modify the `.env` file with the required [environment variables](#environment-variables) accordingly.
-- Run `docker-compose -d up` (or `docker-compose -d --profile local up` if youve built the `network-sniffer` image yourself)
+- Run `docker-compose -d up` (or `docker-compose -d --profile local up` if you built the `network-sniffer` image yourself)
 
 ### Using the sniffer
 
@@ -77,7 +77,7 @@ docker compose down --volumes --remove-orphans
 
 ## Running the sniffer binary file
 
-This option allows you to run the binary file directly on your host machine. Choose this option if your host machine isn't running Linux.
+This option allows you to run the binary file directly on your host machine. **Choose this option if your host machine isn't running Linux.**
 
 #### Install npcap (Windows only)
 
@@ -92,14 +92,14 @@ By default, Windows doesn't support packet capture like Unix systems do. In orde
     wget https://github.com/resurfaceio/goreplay/tree/master/bin/gor-resurface_mac.tar.gz
     ```
     Windows (Powershell)
-    ```bash
+    ```powershell
     Invoke-WebRequest https://github.com/resurfaceio/goreplay/tree/master/bin/gor-resurface_windows.zip -OutFile C:\gor-resurface_windows.zip
     ```
 - Extract the `gor` binary
     ```bash
     tar -xzf gor-resurface_mac.tar.gz  # macOS
     ```
-    ```bash
+    ```powershell
     Expand-Archive gor-resurface_windows.zip  # Windows
     ```
 - Modify permissions if necessary
@@ -112,8 +112,23 @@ By default, Windows doesn't support packet capture like Unix systems do. In orde
 - Set all the required [environment variables](#environment-variables) accordingly.
 - Run the following command
 
+    macOS
     ```bash
-    ./gor --input-raw $NET_DEVICE:$APP_PORTS --input-raw-track-response --input-raw-bpf-filter "(dst port $(echo $APP_PORTS | sed 's/,/ or /g')) or (src port $(echo $APP_PORTS | sed 's/,/ or /g'))" --output-resurface $USAGE_LOGGERS_URL --output-resurface-rules $USAGE_LOGGER_RULES
+    ./gor \
+    --input-raw $NET_DEVICE:$APP_PORTS \
+    --input-raw-track-response \
+    --input-raw-bpf-filter "(dst port $(echo $APP_PORTS | sed 's/,/ or /g')) or (src port $(echo $APP_PORTS | sed 's/,/ or /g'))" \
+    --output-resurface $USAGE_LOGGERS_URL \
+    --output-resurface-rules $USAGE_LOGGER_RULES
+    ```
+    Windows (Powershell)
+    ```powershell
+    ./gor `
+    --input-raw $NET_DEVICE:$APP_PORTS `
+    --input-raw-track-response `
+    --input-raw-bpf-filter "(dst port $($APP_PORTS -match ',' -replace ' or ')) or (src port $($APP_PORTS -match ',' -replace ' or '))" `
+    --output-resurface $USAGE_LOGGERS_URL `
+    --output-resurface-rules $USAGE_LOGGER_RULES
     ```
 
 ## Environment variables
