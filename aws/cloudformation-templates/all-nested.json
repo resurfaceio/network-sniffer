@@ -1,0 +1,382 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Deploys Resurface cluster, and networking resources for VPC mirroring",
+  "Parameters": {
+    "VPCID": {
+      "Type": "AWS::EC2::VPC::Id",
+      "Description": "Select the VPC that corresponds to your EC2 instance."
+    },
+    "InternetGatewayID": {
+      "Type": "String",
+      "Description": "Enter the ID of you VPC's Intenet Gateway. It will be used by the Resurface Subnet."
+    },
+    "NetworkInterfaceID": {
+      "Type": "String",
+      "Description": "The ID of the network interface to mirror traffic from."
+    },
+    "MirrorSourceIP": {
+      "Type": "String",
+      "Description": "Enter the private IP of the EC2 to mirror traffic from."
+    },
+    "VirtualNetworkID": {
+      "Type": "Number",
+      "Description": "VXLAN ID for the Traffic Mirror session.",
+      "Default": 8864121
+    },
+    "AppPort": {
+      "Type": "String",
+      "Description": "Port to mirror traffic from."
+    },
+    "ResurfaceCIDR": {
+      "Type": "String",
+      "Description": "CIDR for the Resurface Subnet."
+    },
+    "ResurfaceRules": {
+      "Type": "String",
+      "Description": "Logging rules. More info: https://resurface.io/logging-rules",
+      "Default": "include debug"
+    },
+    "ResurfaceEntitlementToken": {
+      "Type": "String",
+      "Description": "Token used to connect to the Resurface Docker registry."
+    },
+    "ResurfaceEC2KeyPair": {
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "Description": "Key pair to connect to the Resurface EC2 instance using SSH."
+    }
+  },
+  "Resources": {
+    "ResurfaceSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "MapPublicIpOnLaunch": "true",
+        "CidrBlock": { "Ref": "ResurfaceCIDR" },
+        "VpcId": { "Ref": "VPCID" }
+      }
+    },
+    "ResurfaceSG": {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Resurface Sniffer Security Group",
+        "VpcId" : { "Ref": "VPCID" }
+      }
+    },
+    "ResurfaceSGIngress": {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "CidrIp": { "Fn::Join": [ "/", [ { "Ref": "MirrorSourceIP" }, "32" ] ] },
+        "Description" : "Enable UDP mirrored traffic",
+        "FromPort" : 4789,
+        "ToPort": 4789,
+        "GroupId" : { "Ref": "ResurfaceSG" },
+        "IpProtocol" : "udp"
+      }
+    },
+    "ResurfaceSGIngressSSH": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "CidrIp": "0.0.0.0/0",
+        "FromPort": 22,
+        "ToPort": 22,
+        "GroupId": { "Ref": "ResurfaceSG" },
+        "IpProtocol": "tcp"
+      }
+    },
+    "ResurfaceENI":{
+      "Type" : "AWS::EC2::NetworkInterface",
+      "Properties" : {
+        "GroupSet" : [ { "Ref": "ResurfaceSG" } ],
+        "SubnetId" : { "Ref": "ResurfaceSubnet" }
+      }
+    },
+    "ResurfaceEIP" : {
+      "Type" : "AWS::EC2::EIP",
+      "Properties" : { "Domain" : "vpc" }
+    },
+    "ResurfaceRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": { "Ref": "VPCID" }
+      }
+    },
+    "Route" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "ResurfaceRouteTable" },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "GatewayId" : { "Ref" : "InternetGatewayID" }
+      }
+     },
+     "ResurfaceRouteTableAssoc": {
+      "Type":"AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": { "Ref": "ResurfaceRouteTable" },
+        "SubnetId": { "Ref": "ResurfaceSubnet" }
+      }
+    },
+    "ResurfaceEC2InstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Roles": [ { "Ref": "ECSTaskExecutionRole" } ]
+      }
+    },
+    "ResurfaceEC2Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "IamInstanceProfile" : { "Ref": "ResurfaceEC2InstanceProfile" },
+        "ImageId": "ami-04e6179c63d17513d",
+        "InstanceType" : "t3.2xlarge",
+        "KeyName": { "Ref": "ResurfaceEC2KeyPair" },
+        "NetworkInterfaces": [{
+            "DeviceIndex": "0",
+            "NetworkInterfaceId": { "Ref": "ResurfaceENI" }
+        }],
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [ "",
+              [
+                "#!/bin/bash -xe\n",
+                "echo ECS_CLUSTER=",
+                { "Ref": "ResurfaceCluster" },
+                " >> /etc/ecs/ecs.config\n",
+                "\n",
+                "sudo su root -c \"ip link add vx0 type vxlan id ",
+                { "Ref": "VirtualNetworkID" },
+                " local ",
+                { "Fn::GetAtt": [ "ResurfaceENI", "PrimaryPrivateIpAddress" ] },
+                " remote ",
+                { "Ref": "MirrorSourceIP" },
+                " dev eth0 dstport 4789\"\n",
+                "sudo su root -c \"ip link set vx0 up\"\n",
+                "\n"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "ResurfaceEntitlementSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Name": "resurface/token",
+        "Description": "Resurface entitlement token. Used to pull images from the Resurface Docker registry.",
+        "SecretString": {
+          "Fn::Join": [ "", [
+            "{\"username\":\"resurfacelabs/release\",\"password\":\"",
+            { "Ref": "ResurfaceEntitlementToken" },
+            "\"}"
+          ]]
+        }
+      }
+    },
+    "ECSTaskExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": "ECSTaskExecutionRole",
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": ["ecs-tasks.amazonaws.com", "ecs.amazonaws.com", "ec2.amazonaws.com"]
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": ["arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"],
+        "Policies": [
+          {
+            "PolicyName": "ResurfaceGetSecretPolicy",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "secretsmanager:GetSecretValue"
+                  ],
+                  "Resource": [
+                    {
+                      "Ref": "ResurfaceEntitlementSecret"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "PolicyName": "ResurfaceECSPolicy",
+            "PolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [ {
+                    "Effect": "Allow",
+                    "Action": "ecs:*",
+                    "Resource": "*"
+                } ]
+            } 
+          },
+          {
+            "PolicyName": "AmazonECSforEC2Policy",
+            "PolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [ {
+                    "Effect": "Allow",
+                    "Action": [
+                        "ec2:DescribeTags",
+                        "ecs:CreateCluster",
+                        "ecs:DeregisterContainerInstance",
+                        "ecs:DiscoverPollEndpoint",
+                        "ecs:Poll",
+                        "ecs:RegisterContainerInstance",
+                        "ecs:StartTelemetrySession",
+                        "ecs:UpdateContainerInstancesState",
+                        "ecs:Submit*",
+                        "ecr:GetAuthorizationToken",
+                        "ecr:BatchCheckLayerAvailability",
+                        "ecr:GetDownloadUrlForLayer",
+                        "ecr:BatchGetImage",
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents"
+                    ],
+                    "Resource": "*"
+                } ]
+            }
+          }
+        ]
+      }
+    },
+    "ResurfaceCluster": {
+      "Type": "AWS::ECS::Cluster",
+      "Properties": {
+        "ClusterName": "ResurfaceCluster"
+      }
+    },
+    "ResurfaceTaskDef": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "ContainerDefinitions": [
+          {
+            "Name": "Resurface",
+            "Image": "docker.resurface.io/release/resurface:3.0.21",
+            "RepositoryCredentials": {
+              "CredentialsParameter": { "Ref": "ResurfaceEntitlementSecret" }
+            },
+            "PortMappings": [
+              {
+                "ContainerPort": 7700,
+                "HostPort": 7700
+              },
+              {
+                "ContainerPort": 7701,
+                "HostPort": 7701
+              }
+            ]
+          },
+          {
+            "Name": "NetworkSniffer",
+            "Image": "docker.resurface.io/release/network-sniffer:1.0.0",
+            "RepositoryCredentials": {
+              "CredentialsParameter": { "Ref": "ResurfaceEntitlementSecret" }
+            },
+            "Environment": [
+              {
+                "Name": "USAGE_LOGGERS_URL",
+                "Value": "http://localhost:7701/message"
+              },
+              {
+                "Name": "USAGE_LOGGERS_RULES",
+                "Value": { "Ref": "ResurfaceRules" }
+              },
+              {
+                "Name": "USAGE_LOGGERS_DISABLED",
+                "Value": "false"
+              },
+              {
+                "Name": "APP_PORT",
+                "Value": { "Ref": "AppPort" }
+              },
+              {
+                "Name": "VPC_MIRROR_DEVICE",
+                "Value": "vx0"
+              }
+            ]
+          }
+        ],
+        "ExecutionRoleArn": { "Fn::GetAtt":  [ "ECSTaskExecutionRole", "Arn" ] },
+        "RequiresCompatibilities": [ "EC2" ],
+        "NetworkMode": "host",
+        "Cpu": 5120,
+        "Memory": 10240
+      }
+    },
+    "ResurfaceService": {
+      "Type": "AWS::ECS::Service",
+      "DependsOn": "ResurfaceEC2Instance",
+      "Properties": {
+        "ServiceName": "ResurfaceService",
+        "LaunchType": "EC2",
+        "Cluster": { "Ref": "ResurfaceCluster" },
+        "TaskDefinition": { "Ref": "ResurfaceTaskDef" },
+        "DesiredCount": 1
+      }
+    },
+    "ResurfaceMirrorTarget": {
+      "Type" : "AWS::EC2::TrafficMirrorTarget",
+      "DependsOn": "ResurfaceEC2Instance",
+      "Properties" : {
+        "Description" : "Network interface that will receive mirrored traffic",
+        "NetworkInterfaceId" : { "Ref": "ResurfaceENI" }
+      }
+    },         
+    "ResurfaceMirrorFilter": {
+      "Type" : "AWS::EC2::TrafficMirrorFilter"
+    },
+    "ResurfaceMirrorFilterInboundRule": {
+      "Type" : "AWS::EC2::TrafficMirrorFilterRule",
+      "Properties" : {
+        "Description" : "Mirror all TCP traffic from any location",
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "Protocol" : 6,
+        "RuleAction" : "accept",
+        "RuleNumber" : 100,
+        "SourceCidrBlock" : "0.0.0.0/0",
+        "TrafficDirection" : "ingress",
+        "TrafficMirrorFilterId" : { "Ref": "ResurfaceMirrorFilter" }
+      }
+    },
+    "ResurfaceMirrorFilterOutboundRule": {
+      "Type" : "AWS::EC2::TrafficMirrorFilterRule",
+      "Properties" : {
+        "Description" : "Mirror all TCP traffic to any location",
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "Protocol" : 6,
+        "RuleAction" : "accept",
+        "RuleNumber" : 100,
+        "SourceCidrBlock" : "0.0.0.0/0",
+        "TrafficDirection" : "egress",
+        "TrafficMirrorFilterId" : { "Ref": "ResurfaceMirrorFilter" }
+      }
+    },
+    "ResurfaceMirrorSession": {
+      "Type": "AWS::EC2::TrafficMirrorSession",
+      "Properties": {
+        "NetworkInterfaceId": { "Ref": "NetworkInterfaceID" },
+        "TrafficMirrorTargetId": { "Ref": "ResurfaceMirrorTarget" },
+        "TrafficMirrorFilterId": { "Ref": "ResurfaceMirrorFilter" },
+        "SessionNumber": 1,
+        "VirtualNetworkId": { "Ref": "VirtualNetworkID" }
+      }
+    }
+  },
+  "Outputs": {
+    "VNI": {
+      "Value": { "Ref": "VirtualNetworkID" }
+    },
+    "MirrorTargetIP": {
+      "Value": { "Fn::GetAtt": [ "ResurfaceENI", "PrimaryPrivateIpAddress" ] }
+    }
+  }
+}
