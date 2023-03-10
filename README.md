@@ -1,6 +1,6 @@
 # resurfaceio-network-sniffer
 
-Capture detailed API calls from network traffic to your own [system of record](https://resurface.io).
+Capture detailed API calls directly from network traffic to your own [data lake](https://resurface.io).
 
 ## Contents
 
@@ -13,19 +13,13 @@ Capture detailed API calls from network traffic to your own [system of record](h
 ## Requirements
 
 - docker
-- [Resurface](https://resurface.io/installation) (free docker container)
+- Host network access, including `NET_ADMIN` and `NET_RAW` kernel capabilities.
 
 ## Capturing network traffic
 
-Resurface uses [GoReplay](https://github.com/resurfaceio/goreplay) to capture HTTP traffic directly from network devices in userspace. Think `tcpdump` or Wireshark but without having to go through any of the packet reassembly or parsing process yourself.
+Our `network-sniffer` runs as an independent containerized application. It captures packets from network interfaces, reassembles them, parses both HTTP request and response, packages the entire API calls, and sends it to your Resurface DB instance automatically.
 
-We offer two main alternatives for running the sniffer:
-- [Run network-sniffer container](#network-sniffer-container) (Linux only)
-- [Run binary directly on your host machine](#direct-approach)
-
-## Running the `network-sniffer` container
-
-Our sniffer runs as an independent containerized application. It captures packets from network interfaces, reassembles them, parses both HTTP request and response, packages the entire API calls, and sends it to your Resurface DB instance automatically.
+We use [GoReplay](https://github.com/resurfaceio/goreplay) to capture HTTP traffic directly from network devices in userspace. Think `tcpdump` or Wireshark but without having to go through any of the packet reassembly or parsing process yourself.
 
 After modifying the `.env` file with the required [environment variables](#environment-variables), just run the following docker command in the host machine:
 
@@ -39,29 +33,7 @@ The `--network host` option must be specified in to capture traffic from other c
 
 The `network-sniffer` container option works great when orchestrating different applications. In this example, we use `docker-compose` but you can also use [Kubernetes](https://resurface.io/docs#sniffer-daemonset), or any other orchestration tool.
 
-#### (Optional) Building the image
-
-The `resurfaceio/network-sniffer` multiplatform image is built and maintained by Resurface ([more info](./buildx/README.md)). However, if you want you can also build your own image using the binary file that corresponds to your machine
-
-- Clone this repo
-    ```bash
-    git clone https://github.com/resurfaceio/network-sniffer.git
-    cd network-sniffer
-    ```
-- Download the binary that corresponds to your architecture and operating system
-    ```bash
-    wget ...
-    ```
-- Run `docker build -t network-sniffer .`
-
-### Running the containers
-
-- Pull (or build) the image
-- Modify the `.env` file with the required [environment variables](#environment-variables) accordingly.
-- Run `docker-compose -d up` (or `docker-compose -d --profile local up` if you built the `network-sniffer` image yourself)
-
-### Using the sniffer
-
+- Run `dockercompose up` in your terminal
 - Go to http://localhost:7700 and log in to your Resurface instance
 - Perform a few API calls to the `httpbin` service
     ```bash
@@ -69,67 +41,11 @@ The `resurfaceio/network-sniffer` multiplatform image is built and maintained by
     ```
 - See the API calls flowing into the Resurface UI
 
-### Stopping the containers
+To stop all containers:
 
 ```bash
-docker compose down --volumes --remove-orphans
+docker compose down --remove-orphans
 ```
-
-## Running the sniffer binary file
-
-This option allows you to run the binary file directly on your host machine. **Choose this option if your host machine isn't running Linux.**
-
-#### Install npcap (Windows only)
-
-By default, Windows doesn't support packet capture like Unix systems do. In order to perform this operation, a packet capture library like [npcap](https://nmap.org/npcap/) must be installed first.
-
-#### Download the network sniffer application
-
-- Download the tarball, zip, or binary file that corresponds to you system from the [bin directory](https://github.com/resurfaceio/goreplay/tree/master/bin)
-
-    macOS
-    ```bash
-    wget https://github.com/resurfaceio/goreplay/tree/master/bin/gor-resurface_mac.tar.gz
-    ```
-    Windows (Powershell)
-    ```powershell
-    Invoke-WebRequest https://github.com/resurfaceio/goreplay/tree/master/bin/gor-resurface_windows.zip -OutFile C:\gor-resurface_windows.zip
-    ```
-- Extract the `gor` binary
-    ```bash
-    tar -xzf gor-resurface_mac.tar.gz  # macOS
-    ```
-    ```powershell
-    Expand-Archive gor-resurface_windows.zip  # Windows
-    ```
-- Modify permissions if necessary
-    ```bash
-    chmod +x ./gor
-    ```
-
-#### Running the network sniffer application
-
-- Set all the required [environment variables](#environment-variables) accordingly.
-- Run the following command
-
-    macOS
-    ```bash
-    ./gor \
-    --input-raw $NET_DEVICE:$APP_PORTS \
-    --input-raw-track-response \
-    --input-raw-bpf-filter "(dst port $(echo $APP_PORTS | sed 's/,/ or /g')) or (src port $(echo $APP_PORTS | sed 's/,/ or /g'))" \
-    --output-resurface $USAGE_LOGGERS_URL \
-    --output-resurface-rules $USAGE_LOGGER_RULES
-    ```
-    Windows (Powershell)
-    ```powershell
-    ./gor `
-    --input-raw $NET_DEVICE:$APP_PORTS `
-    --input-raw-track-response `
-    --input-raw-bpf-filter "(dst port $($APP_PORTS -match ',' -replace ' or ')) or (src port $($APP_PORTS -match ',' -replace ' or '))" `
-    --output-resurface $USAGE_LOGGERS_URL `
-    --output-resurface-rules $USAGE_LOGGER_RULES
-    ```
 
 ## Environment variables
 
@@ -150,19 +66,26 @@ The `COMPOSE_PROFILES` environment variable sets the profile to use when no `--p
 
 ## VPC mirroring
 
-Capturing inbound and outbound traffic from the network interfaces that are attached to EC2 instances can be achieved with VPC mirroring. Click [here](http://resurface.io/blog/api-calls-with-aws-vpc-mirroring) for a step-by-step guide on how to set that up using AWS.
+Capturing inbound and outbound traffic from the network interfaces that are attached to EC2 instances can be achieved with VPC mirroring. Click [here](https://resurface.io/aws-vpc-mirroring) for a step-by-step guide on how to set that up using AWS.
 
-Once you have created the traffic mirror session with its corresponding filter, the mirrored traffic is encapsulated in a VXLAN header. We can set up a new VXLAN interface on top of an existing `eth0` for tunnel endpoint communication using the following command:
+Once you have created the traffic mirror session with its corresponding filter, the mirrored traffic is encapsulated in a VXLAN header. All VXLAN headers are associated with a 24-bit segment ID named VXLAN Network Identifier (VNI) for a given VPC mirroring session. The target EC2 instance will receive the mirrored traffic on the IANA-assigned port, UDP port 4789.
 
-    sudo ip link add vx0 type vxlan id $VNI local $SOURCE_EC2_IP remote $TARGET_EC2_IP dev eth0 dstport 4789
+Then, add the following lines to your `.env` file:
 
-Here we are adding a virtual link named `vx0` that will work as a VXLAN interface on top of the `eth0` device. All VXLAN headers are associated with a 24-bit segment ID named VXLAN Network Identifier (VNI) for a given VPC mirroring session. The target EC2 instance will receive the mirrored traffic on the IANA-assigned port, UDP port 4789.
+```bash
+RAW_ENGINE=vxlan
+VXLAN_PORT=4789
+```
 
-Then, just change the state of the device to UP:
+and run the `network-sniffer` container:
 
-    sudo ip link set vx0 up
+```bash
+docker run -d --name netsniffer --env-file .env --network host resurfaceio/network-sniffer:1.2.3
+```
 
-Finally, set the environment variable `VPC_MIRROR_DEVICE=vx0` and  run the sniffer application using your favorite alternative.
+## Kubernetes
+
+Please refer to the `sniffer` section in the `resurfaceio/resurface` chart's [README](https://github.com/resurfaceio/containers/blob/v3.5.x/helm/resurfaceio/resurface/README.md).
 
 ## Protecting User Privacy
 
@@ -173,4 +96,4 @@ but logging rules are easily customized to meet the needs of any application.
 <a href="https://resurface.io/logging-rules">Logging rules documentation</a>
 
 ---
-<small>&copy; 2016-2022 <a href="https://resurface.io">Resurface Labs Inc.</a></small>
+<small>&copy; 2016-2023 <a href="https://resurface.io">Resurface Labs Inc.</a></small>
