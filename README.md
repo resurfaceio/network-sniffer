@@ -14,7 +14,7 @@ Capture detailed API calls directly from network traffic to your own [data lake]
 
 - docker
 - Host network access, including permission to list and listen to network devices
--`NET_ADMIN` and `NET_RAW` kernel capabilities enabled
+- `NET_ADMIN` and `NET_RAW` kernel capabilities enabled (Linux)
 
 ## Capturing network traffic
 
