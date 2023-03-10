@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   resurface:
-    image: resurfaceio/resurface:3.2.6
+    image: resurfaceio/resurface:3.4.24
     container_name: resurface
     ports:
       - 7700:7700

@@ -6,8 +6,10 @@ Capture detailed API calls directly from network traffic to your own [data lake]
 
 - [Requirements](#requirements)
 - [Capturing network traffic](#capturing-network-traffic)
+- [Capturing encrypted traffic](#capturing-encrypted-traffic)
 - [Environment variables](#environment-variables)
 - [VPC mirroring](#vpc-mirroring)
+- [Kubernetes](#kubernetes)
 - [Protecting User Privacy](#protecting-user-privacy)
 
 ## Requirements
@@ -31,6 +33,18 @@ docker run -d --name netsniffer --env-file .env --network host resurfaceio/netwo
 ```
 
 The `--network host` option must be specified in to capture traffic from other containers (or non-containerized apps) running in the machine.
+
+## Capturing encrypted traffic (HTTPS)
+
+In order to capture traffic from secure connections, network analyzer applications will sit between the client and your application acting as middlemen. However, in order to read the encrypted traffic, these applications will require you to load both keys and certificates, increasing the attack surface for potential MITM attacks —which is exactly the opposite intent of secure connections. At Resurface, security is our main concern, which is why we **strongly** advice against loading your TLS/SSL keys into any application that does this. None of our integrations support capturing traffic from secure connections, including `network-sniffer`.
+
+Instead, we recommend running the `network-sniffer` container upstream, after TLS termination occurs. For example, if TLS termination occurs in a reverse proxy, like this:
+
+
+
+we suggest configuring the sniffer to capture from the backend applications directly. In this case, that means setting the `APP_PORTS` variable to `8080,3000,5432`.
+
+If TLS termination occurs within the application itself, we recommend using any of our instrumentation-application loggers: [logger-java](https://github.com/resurfaceio/logger-java), [logger-python](https://github.com/resurfaceio/logger-python), [logger-go](https://github.com/resurfaceio/logger-go), [logger-nodejs](https://github.com/resurfaceio/logger-nodejs), [logger-ruby](https://github.com/resurfaceio/logger-ruby), [logger-lua](https://github.com/resurfaceio/logger-lua), [logger-dotnet]
 
 ### Example: Demo app with network-sniffer as sidecar
 

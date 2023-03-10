@@ -39,3 +39,19 @@ version being `1.3.6-Resurface`.
 The script will ask for an AWS profile in order to run the `aws ec2` commands properly. You must be 
 logged in your docker client and be part of the `resurfaceio` organization in order to push images
 to the `resurfaceio/network-sniffer` repository.
+
+
+#### (Optional) Building the image
+
+The `resurfaceio/network-sniffer` multiplatform image is built and maintained by Resurface ([more info](./buildx/README.md)). However, if you want you can also build your own image using the binary file that corresponds to your machine
+
+- Clone this repo
+    ```bash
+    git clone https://github.com/resurfaceio/network-sniffer.git
+    cd network-sniffer
+    ```
+- Download the binary that corresponds to your architecture and operating system
+    ```bash
+    wget ...
+    ```
+- Run `docker build -t network-sniffer .`
