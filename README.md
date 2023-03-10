@@ -19,6 +19,8 @@ Capture detailed API calls directly from network traffic to your own [data lake]
 
 Our `network-sniffer` runs as an independent containerized application. It captures packets from network interfaces, reassembles them, parses both HTTP request and response, packages the entire API calls, and sends it to your Resurface DB instance automatically.
 
+<img src="https://user-images.githubusercontent.com/7117255/224335993-afb64a80-01e9-4c23-95b2-9c1cedaa9296.png"  width="600">
+
 We use [GoReplay](https://github.com/resurfaceio/goreplay) to capture HTTP traffic directly from network devices in userspace. Think `tcpdump` or Wireshark but without having to go through any of the packet reassembly or parsing process yourself.
 
 After modifying the `.env` file with the required [environment variables](#environment-variables), just run the following docker command in the host machine:
@@ -67,6 +69,8 @@ The `COMPOSE_PROFILES` environment variable sets the profile to use when no `--p
 ## VPC mirroring
 
 Capturing inbound and outbound traffic from the network interfaces that are attached to EC2 instances can be achieved with VPC mirroring. Click [here](https://resurface.io/aws-vpc-mirroring) for a step-by-step guide on how to set that up using AWS.
+
+<img src="https://paper-attachments.dropbox.com/s_317E5894CD6185118CBDE74A3024EB5E9062F57EA81B0E96E18AC176C4C2EC4E_1658853675107_eks-mirroring-peering.png"  width="600">
 
 Once you have created the traffic mirror session with its corresponding filter, the mirrored traffic is encapsulated in a VXLAN header. All VXLAN headers are associated with a 24-bit segment ID named VXLAN Network Identifier (VNI) for a given VPC mirroring session. The target EC2 instance will receive the mirrored traffic on the IANA-assigned port, UDP port 4789.
 
