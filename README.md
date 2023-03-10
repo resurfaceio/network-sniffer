@@ -40,11 +40,11 @@ In order to capture traffic from secure connections, network analyzer applicatio
 
 Instead, we recommend running the `network-sniffer` container upstream, after TLS termination occurs. For example, if TLS termination occurs in a reverse proxy, like this:
 
-
+<img src="https://user-images.githubusercontent.com/7117255/224347366-ab1332d4-8632-4b67-af0f-a542f2d7255b.png"  width="500">
 
 we suggest configuring the sniffer to capture from the backend applications directly. In this case, that means setting the `APP_PORTS` variable to `8080,3000,5432`.
 
-If TLS termination occurs within the application itself, we recommend using any of our instrumentation-application loggers: [logger-java](https://github.com/resurfaceio/logger-java), [logger-python](https://github.com/resurfaceio/logger-python), [logger-go](https://github.com/resurfaceio/logger-go), [logger-nodejs](https://github.com/resurfaceio/logger-nodejs), [logger-ruby](https://github.com/resurfaceio/logger-ruby), [logger-lua](https://github.com/resurfaceio/logger-lua), [logger-dotnet]
+If TLS termination occurs within the application itself, we recommend using any of our instrumentation-application loggers: [logger-java](https://github.com/resurfaceio/logger-java), [logger-python](https://github.com/resurfaceio/logger-python), [logger-go](https://github.com/resurfaceio/logger-go), [logger-nodejs](https://github.com/resurfaceio/logger-nodejs), [logger-ruby](https://github.com/resurfaceio/logger-ruby), [logger-lua](https://github.com/resurfaceio/logger-lua), [logger-dotnet](https://github.com/resurfaceio/logger-dotnet)
 
 ### Example: Demo app with network-sniffer as sidecar
 
