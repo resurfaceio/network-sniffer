@@ -257,7 +257,7 @@ for eni in $enis; do
 done
 
 # Update VNIs ConfigMap
-echo -e "data:\n  vnis: ${x[@]:-\"\"}" > patch.yaml
+echo -e "data:\n  vnis: ${vnis[@]:-\"\"}" > patch.yaml
 [ -n "${MIRROR_DEBUG_OUT}" ] && echo "patch.yaml" && cat patch.yaml
 kubectl patch configmap/vnis-config -n $K8S_NAMESPACE --patch-file patch.yaml
 
