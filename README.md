@@ -1,6 +1,8 @@
 # resurfaceio-network-sniffer
+Easily log API requests and responses to your own <a href="https://resurface.io">security data lake</a>.
 
-Capture detailed API calls directly from network traffic to your own [data lake](https://resurface.io).
+[![License](https://img.shields.io/github/license/resurfaceio/network-sniffer)](https://github.com/resurfaceio/network-sniffer/blob/master/LICENSE)
+[![Contributing](https://img.shields.io/badge/contributions-welcome-green.svg)](https://github.com/resurfaceio/network-sniffer/blob/master/CONTRIBUTING.md)
 
 ## Contents
 
@@ -34,7 +36,7 @@ docker run -d --name netsniffer --env-file .env --network host resurfaceio/netwo
 
 The `--network host` option must be specified in to capture traffic from other containers (or non-containerized apps) running in the machine.
 
-## Capturing encrypted traffic (HTTPS)
+## Capturing encrypted traffic
 
 In order to capture traffic from secure connections, network analyzer applications will sit between the client and your application acting as middlemen. However, in order to read the encrypted traffic, these applications will require you to load both keys and certificates, increasing the attack surface for potential MITM attacks —which is exactly the opposite intent of secure connections. At Resurface, security is our main concern, which is why we **strongly** advice against loading your TLS/SSL keys into any application that does this. None of our integrations support capturing traffic from secure connections, including `network-sniffer`.
 
