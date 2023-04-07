@@ -260,6 +260,9 @@ done
 echo -e "data:\n  vnis: ${x[@]}" > patch.yaml
 kubectl patch configmap/vnis-config -n $K8S_NAMESPACE --patch-file patch.yaml
 
+# Restart Sniffer DaemonSet
+kubectl rollout restart $(kubectl get ds -n $K8S_NAMESPACE -o name | grep sniffer) -n $K8S_NAMESPACE
+
 # TODO
 # - Add support for VPC peering
 # - Add support for TMT auto-delete (TMT are not deleted automatically when their corresponding ENI is deleted)
