@@ -1,5 +1,6 @@
 #!/bin/bash
-
+# © 2016-2023 Resurface Labs Inc.
+#
 # DESCRIPTION
 # This script creates all the necessary resources to mirror application traffic to a Resurface instance on EKS.
 # Specifically, it creates by default:
