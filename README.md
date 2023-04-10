@@ -31,14 +31,14 @@ We use [GoReplay](https://github.com/resurfaceio/goreplay) to capture HTTP traff
 After modifying the `.env` file with the required [environment variables](#environment-variables), just run the following docker command in the host machine:
 
 ```bash
-docker run -d --name netsniffer --env-file .env --network host resurfaceio/network-sniffer:1.2.3
+docker run -d --name netsniffer --env-file .env --network host resurfaceio/network-sniffer:1.3.0
 ```
 
 The `--network host` option must be specified in to capture traffic from other containers (or non-containerized apps) running in the machine.
 
 ## Capturing encrypted traffic
 
-In order to capture traffic from secure connections, network analyzer applications will sit between the client and your application acting as middlemen. However, in order to read the encrypted traffic, these applications will require you to load both keys and certificates, increasing the attack surface for potential MITM attacks —which is exactly the opposite intent of secure connections. At Resurface, security is our main concern, which is why we **strongly** advice against loading your TLS/SSL keys into any application that does this. None of our integrations support capturing traffic from secure connections, including `network-sniffer`.
+When capturing traffic from secure connections, network analyzer applications will sit between the client and your application acting as middlemen. However, in order to read the encrypted traffic these applications will require you to load both keys and certificates, increasing the attack surface for potential MITM attacks —which is exactly the opposite intent of secure connections. At Resurface, security is our main concern, which is why we **strongly** advice against loading your TLS/SSL keys into any application that does this. None of our integrations support capturing traffic from secure connections, including `network-sniffer`.
 
 Instead, we recommend running the `network-sniffer` container upstream, after TLS termination occurs. For example, if TLS termination occurs in a reverse proxy, like this:
 
@@ -50,9 +50,9 @@ If TLS termination occurs within the application itself, we recommend using any 
 
 ### Example: Demo app with network-sniffer as sidecar
 
-The `network-sniffer` container option works great when orchestrating different applications. In this example, we use `docker-compose` but you can also use [Kubernetes](https://resurface.io/docs#sniffer-daemonset), or any other orchestration tool.
+Capturing API calls using our `network-sniffer` as a sidecar container works great when orchestrating different applications. In this example, we use `docker-compose` but you can also use [Kubernetes](https://resurface.io/docs#sniffer-daemonset), or any other orchestration tool.
 
-- Run `dockercompose up` in your terminal
+- Run `docker compose up` in your terminal
 - Go to http://localhost:7700 and log in to your Resurface instance
 - Perform a few API calls to the `httpbin` service
     ```bash
@@ -94,14 +94,15 @@ Once you have created the traffic mirror session with its corresponding filter, 
 Then, add the following lines to your `.env` file:
 
 ```bash
-RAW_ENGINE=vxlan
-VXLAN_PORT=4789
+SNIFFER_ENGINE=vxlan
+SNIFFER_MIRROR_VXLANPORT=4789
+SNIFFER_MIRROR_VNIS=123
 ```
 
-and run the `network-sniffer` container:
+and run the `network-sniffer` container in the target EC2 instance:
 
 ```bash
-docker run -d --name netsniffer --env-file .env --network host resurfaceio/network-sniffer:1.2.3
+docker run -d --name netsniffer --env-file .env --network host resurfaceio/network-sniffer:1.3.0
 ```
 
 ## Kubernetes
