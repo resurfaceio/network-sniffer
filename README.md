@@ -85,6 +85,8 @@ The `COMPOSE_PROFILES` environment variable sets the profile to use when no `--p
 
 ## VPC mirroring
 
+### AWS
+
 Capturing inbound and outbound traffic from the network interfaces that are attached to EC2 instances can be achieved with VPC mirroring. Click [here](https://resurface.io/aws-vpc-mirroring) for a step-by-step guide on how to set that up using AWS.
 
 <img src="https://paper-attachments.dropbox.com/s_317E5894CD6185118CBDE74A3024EB5E9062F57EA81B0E96E18AC176C4C2EC4E_1658853675107_eks-mirroring-peering.png"  width="600">
