@@ -256,14 +256,20 @@ for eni in $enis; do
   fi
 done
 
-# Update VNIs ConfigMap
+# Update VNIs ConfigMap if VNIs have changed
 quoted_vnis=$(echo "${vnis[@]}" | sed 's/^/"/g;s/$/"/g')
-echo -e "data:\n  vnis: ${quoted_vnis}" > patch.yaml
-[ -n "${MIRROR_DEBUG_OUT}" ] && echo "patch.yaml" && cat patch.yaml
-kubectl patch configmap/vnis-config -n $K8S_NAMESPACE --patch-file patch.yaml
+current_vnis=$(kubectl get configmap/vnis-config -n $K8S_NAMESPACE -o json | jq .data.vnis | sed 's/,/ /g')
+[ -n "${MIRROR_DEBUG_OUT}" ] && echo "quoted_vnis: " "${quoted_vnis}" "; current_vnis: " "${current_vnis}"
+if [ "${quoted_vnis}" != "${current_vnis}" ]; then
+  echo -e "data:\n  vnis: ${quoted_vnis}" > patch.yaml
+  [ -n "${MIRROR_DEBUG_OUT}" ] && echo "patch.yaml" && cat patch.yaml
+  kubectl patch configmap/vnis-config -n $K8S_NAMESPACE --patch-file patch.yaml
 
-# Restart Sniffer DaemonSet
-kubectl rollout restart $(kubectl get ds -n $K8S_NAMESPACE -o name | grep sniffer) -n $K8S_NAMESPACE
+  # Restart Sniffer DaemonSet
+  kubectl rollout restart $(kubectl get ds -n $K8S_NAMESPACE -o name | grep sniffer) -n $K8S_NAMESPACE
+else
+  echo "VNIs for current sessions are equal to configured VNIs. Sniffer configuration remains unchanged."
+fi
 
 # TODO
 # - Add support for VPC peering
