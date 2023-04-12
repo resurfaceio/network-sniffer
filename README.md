@@ -109,7 +109,59 @@ docker run -d --name netsniffer --env-file .env --network host resurfaceio/netwo
 
 ## Kubernetes
 
-Please refer to the `sniffer` section in the `resurfaceio/resurface` chart's [README](https://github.com/resurfaceio/containers/blob/v3.5.x/helm/resurfaceio/resurface/README.md).
+Resurface can deploy an instance of `network-sniffer` to every node in your Kubernetes cluster using a DaemonSet. This allows API calls to be captured without having to modify each workload. The sniffer DaemonSet is disabled by default, but can be enabled with a simple helm command:
+
+```bash
+helm upgrade -i resurface resurfaceio/resurface --namespace resurface --set sniffer.enabled=true --set sniffer.discovery.enabled=true --reuse-values
+```
+
+Our sniffer discovery feature automatically captures all API traffic as services start and stop within the cluster. However, if you already know which pods, services or labelled workloads you would like to capture from, it is recommended to specify those and turn off the discovery feature. To do so, you will need to create a `sniffer-values.yaml` file similar to the one in the example below:
+
+```yaml
+sniffer:
+  enabled: true
+  discovery:
+    enabled: false
+  logger:
+    rules: include debug
+  services:
+  - name: service-a
+    namespace: ns1
+    ports: [ 8000, 3000 ]
+  - name: service-b
+    namespace: ns2
+  pods:
+  - name: apod-12345A
+    namespace: podns1
+    ports: [ 8080 ]
+  - name: apod-12345B
+    namespace: podns2
+  labels:
+  - keyvalues: [ "key1=value1","key2=value2","key4=value4" ]
+    namespace: ns3
+```
+
+In this example, we have:
+- A kubernetes service named `service-a` on a kubernetes namespace named `ns1`, exposing ports `8000` and `3000`
+- A kubernetes service named `service-b` on a kubernetes namespace named `ns2`, exposing unknown ports (the sniffer will attempt to detect the exposed ports)
+- A kubernetes pod named `apod-12345A` on a kubernetes namespace named `podns1`, exposing port `8080`
+- A kubernetes pod named `apod-12345B` on a kubernetes namespace named `podns1`, exposing unknown ports
+- An unspecified kubernetes workload labelled with three different key-value pairs (`"key1=value1","key2=value2","key4=value4"`) on a kubernetes namespace named `ns3`, exposing unknown ports
+
+
+Use and replace the corresponding fields according to your specific case. For a complete reference on the values supported by the `resurfaceio/resurface` Helm chart, refer to the chart's [README](https://github.com/resurfaceio/containers/blob/v3.5.x/helm/resurfaceio/resurface/README.md).
+
+Once you have your `sniffer-values.yaml` file, you can go ahead and perform the corresponding helm upgrade:
+
+```bash
+helm upgrade -i resurface resurfaceio/resurface --namespace resurface -f sniffer-values.yaml --reuse-values
+```
+
+Verify the you have as many `resurface-sniffer` pods in a running state as there are k8s nodes in your cluster:
+
+```bash
+kubectl get pods -n resurface | grep sniffer
+```
 
 ## Protecting User Privacy
 
