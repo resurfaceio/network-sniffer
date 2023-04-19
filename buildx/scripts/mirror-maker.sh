@@ -26,8 +26,9 @@
 # Mirror filter:
 # $MIRROR_FILTER_ID: Traffic mirror filter ID. Optional.
 # Mirror sources:
-# $MIRROR_SOURCE_ECS_CLUSTER_NAME: Name of ECS cluster running applications to capture API calls from. Optional.
-# $MIRROR_SOURCE_ECS_TASKS: Comma-separated list of task IDs. Optional.
+# $MIRROR_SOURCE_ECS_CLUSTERS: Comma-separated list of names of ECS clusters running applications to capture API calls from. Optional.
+# Deprecated: $MIRROR_SOURCE_ECS_TASKS: Comma-separated list of task IDs. Optional.
+# $MIRROR_SOURCE_ECS_LAUNCH_TYPE: Filter ECS tasks by launch type. It can be "EC2", "FARGATE", "EXTERNAL", or "all". Optional. Defaults to "EC2".
 # $MIRROR_SOURCE_AUTOSCALING_GROUPS: Comma-separated list of autoscaling groups running applications to capture API calls from. Optional.
 # $MIRROR_SOURCE_EC2_INSTANCES: Comma-separated list of IDs of EC2 instances running applications to capture API calls from. Optional.
 # Other:
@@ -42,7 +43,7 @@
   "\nMIRROR_TARGET_IDS: ${MIRROR_TARGET_IDS}" \
   "\nMIRROR_TARGET_SG: ${MIRROR_TARGET_SG}" \
   "\nMIRROR_FILTER_ID: ${MIRROR_FILTER_ID}" \
-  "\nMIRROR_SOURCE_ECS_CLUSTER_NAME: ${MIRROR_SOURCE_ECS_CLUSTER_NAME}" \
+  "\nMIRROR_SOURCE_ECS_CLUSTERS: ${MIRROR_SOURCE_ECS_CLUSTERS}" \
   "\nMIRROR_SOURCE_ECS_TASKS: ${MIRROR_SOURCE_ECS_TASKS}" \
   "\nMIRROR_SOURCE_AUTOSCALING_GROUPS: ${MIRROR_SOURCE_AUTOSCALING_GROUPS}" \
   "\nMIRROR_SOURCE_EC2_INSTANCES: ${MIRROR_SOURCE_EC2_INSTANCES}" \
@@ -119,11 +120,6 @@ if [ -z "${target_ids}" ]; then
   [ -n "${MIRROR_DEBUG_OUT}" ] && echo "EKS cluster name is provided"
   # Get NodeGroups for EKS cluster
   eks_nodegroup_names=${MIRROR_TARGET_EKS_NODEGROUP_NAME:-$(aws eks list-nodegroups --cluster-name $MIRROR_TARGET_EKS_CLUSTER_NAME | jq -r '.nodegroups | join(" ")')}
-  # if [ -z "${MIRROR_TARGET_EKS_NODEGROUP_NAME}" ]; then
-  #   eks_nodegroup_names=
-  # else
-  #   eks_nodegroup_names=${MIRROR_TARGET_EKS_NODEGROUP_NAME}
-  # fi
   # TODO - Use custom trap instead
   [ -z "${eks_nodegroup_names}" ] && echo "Error: couldn't retrieve node groups from EKS cluster ${MIRROR_TARGET_EKS_CLUSTER_NAME}" 1>&2 && exit 1
   [ -n "${MIRROR_DEBUG_OUT}" ] && echo "EKS nodegroup names: ${eks_nodegroup_names}"
@@ -200,17 +196,26 @@ fi
 csq_autoscaling_groups=$(csq "${MIRROR_SOURCE_AUTOSCALING_GROUPS}")
 [ -z "${csq_autoscaling_groups}" ] && asg_instances="" || asg_instances=$(aws autoscaling describe-auto-scaling-groups | jq -r '[.AutoScalingGroups[] | select(.AutoScalingGroupName == ('$csq_autoscaling_groups')) | .Instances[].InstanceId] | join(" ")')
 
-if [ -n "${MIRROR_SOURCE_ECS_CLUSTER_NAME}" ]; then
-  # Get all tasks in ECS cluster if not already defined
-  ecs_tasks=${MIRROR_SOURCE_ECS_TASKS:-$(aws ecs list-tasks --cluster $MIRROR_SOURCE_ECS_CLUSTER_NAME | jq -r '.taskArns | join(" ")')}
-  if [ -n "${ecs_tasks}" ]; then
-    # Get all ENIs attached to each task
-    ecs_enis=$(aws ecs describe-tasks --cluster $MIRROR_SOURCE_ECS_CLUSTER_NAME --tasks $ecs_tasks | jq -r '[.tasks[].attachments[] | select((.type == "ElasticNetworkInterface") and (.status == "ATTACHED")) | .details[] | select(.name == "networkInterfaceId") | .value] | unique | join(" ")')
-    
-    # Get instance ID for all instances without ENI directly attached to them (i.e. not awsvpc network mode)
-    ci_arns=$(aws ecs describe-tasks --cluster $MIRROR_SOURCE_ECS_CLUSTER_NAME --tasks $ecs_tasks | jq -r '[.tasks[] | select(.attachments | length == 0) | .containerInstanceArn] | unique | join(" ")')
-    [ -n "${ci_arns}" ] && ecs_instances=$(aws ecs describe-container-instances --container-instances $ci_arns --cluster $MIRROR_SOURCE_ECS_CLUSTER_NAME | jq -r '[.containerInstances[].ec2InstanceId] | unique | join(" ")')
-  fi
+# Get all tasks for each ECS cluster (if not already defined)
+if [ -n "${MIRROR_SOURCE_ECS_CLUSTERS}" ]; then
+  # Filter tasks by launch type
+  launch_type="${MIRROR_SOURCE_ECS_LAUNCH_TYPE:-EC2}"
+  [ "${launch_type}" = "all" ] && launch_option='' || launch_option="--launch-type ${launch_type}"
+  
+  ecs_clusters=$(echo $MIRROR_SOURCE_ECS_CLUSTERS | sed 's/,/ /g')
+  for ecs_cluster in $ecs_clusters; do
+    # TODO - Add support for ecs task white/blacklisting
+    # ecs_tasks=${MIRROR_SOURCE_ECS_TASKS:-$(aws ecs list-tasks --cluster $ecs_cluster $launch_option | jq -r '.taskArns | join(" ")')}
+    ecs_tasks=$(aws ecs list-tasks --cluster $ecs_cluster $launch_option | jq -r '.taskArns | join(" ")')
+    if [ -n "${ecs_tasks}" ]; then
+      # Get all ENIs attached to each task
+      ecs_enis+=" "$(aws ecs describe-tasks --cluster $ecs_cluster --tasks $ecs_tasks | jq -r '[.tasks[].attachments[] | select((.type == "ElasticNetworkInterface") and (.status == "ATTACHED")) | .details[] | select(.name == "networkInterfaceId") | .value] | unique | join(" ")')
+      
+      # Get instance ID for all instances without ENI directly attached to them (i.e. not awsvpc network mode)
+      ci_arns=$(aws ecs describe-tasks --cluster $ecs_cluster --tasks $ecs_tasks | jq -r '[.tasks[] | select(.attachments | length == 0) | .containerInstanceArn] | unique | join(" ")')
+      [ -n "${ci_arns}" ] && ecs_instances+=" "$(aws ecs describe-container-instances --container-instances $ci_arns --cluster $ecs_cluster | jq -r '[.containerInstances[].ec2InstanceId] | unique | join(" ")')
+    fi
+  done
 fi
 
 # Get ENIs of both ASG and ECS instances
@@ -266,7 +271,9 @@ if [ "${quoted_vnis}" != "${current_vnis}" ]; then
   kubectl patch configmap/vnis-config -n $K8S_NAMESPACE --patch-file patch.yaml
 
   # Restart Sniffer DaemonSet
-  kubectl rollout restart $(kubectl get ds -n $K8S_NAMESPACE -o name | grep sniffer) -n $K8S_NAMESPACE
+  # TODO - sed s/$/"/g not working (double quote is prepended instead of appended). DS will be restarted every time 
+  current_vnis=$(kubectl exec -it $(kubectl get pod -o name -n $K8S_NAMESPACE | grep sniffer | head -n 1) -n $K8S_NAMESPACE -- sh -c "env | grep SNIFFER_MIRROR_VNIS | sed 's/SNIFFER_MIRROR_VNIS=//g'" | sed 's/,/ /g;s/^/"/g;s/$/"/g')
+  [ "${quoted_vnis}" != "${current_vnis}" ] && kubectl rollout restart $(kubectl get ds -n $K8S_NAMESPACE -o name | grep sniffer) -n $K8S_NAMESPACE
 else
   echo "VNIs for current sessions are equal to configured VNIs. Sniffer configuration remains unchanged."
 fi
