@@ -1,5 +1,5 @@
 #!/bin/bash
-# © 2016-2023 Resurface Labs Inc.
+# © 2016-2023 Graylog, Inc.
 #
 # DESCRIPTION
 # This script creates all the necessary resources to mirror application traffic to a Resurface instance on EKS.
