@@ -6,6 +6,7 @@ mode=$SNIFFER_ENGINE
 debug=$SNIFFER_DEBUG_ENABLED
 verbosity=${SNIFFER_DEBUG_VERBOSITY:=0}
 export_to=${SNIFFER_DEBUG_EXPORT:=none}
+pcap_buffer_size=${SNIFFER_PCAP_BUFFER_SIZE:=0}
 
 bpf() {
   bpf_ports=$(echo $1 | sed 's/,/ or /g')
@@ -18,6 +19,10 @@ rules() {
 
 inputs() {
   options="--input-raw $device:$ports"
+
+  if [ "$pcap_buffer_size" -gt 0 ]; then
+    options="${options} --input-raw-buffer-size ${pcap_buffer_size}"
+  fi
 
   if [[ "$mode" == "mirror" ]]; then
     options="${options} --input-raw-engine vxlan"
