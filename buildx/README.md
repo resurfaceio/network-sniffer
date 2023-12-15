@@ -30,11 +30,11 @@ The script takes two positional arguments: a docker tag, and a binary version. B
 in order for the build process to take place. For example:
 
 ```bash
-./network-sniffer.sh 1.2.4 1.3.6-Resurface
+./network-sniffer.sh 1.4.0 1.4.2-Resurface
 ```
 
-Will build and push the `resurfaceio/network-sniffer:1.2.4` image, running the `gor` binary with its 
-version being `1.3.6-Resurface`.
+Will build and push the `resurfaceio/network-sniffer:1.4.0` image, running the `gor` binary with its 
+version being `1.4.2-Resurface`.
 
 The script will ask for an AWS profile in order to run the `aws ec2` commands properly. You must be 
 logged in your docker client and be part of the `resurfaceio` organization in order to push images
