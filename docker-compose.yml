@@ -27,13 +27,4 @@ services:
     container_name: resurface-sniffer
     network_mode: "host"
     env_file: .env
-    profiles:
-      - default
 
-  sniffer-debug:
-    image: resurfaceio/network-sniffer:1.2.3-debug
-    container_name: resurface-sniffer
-    network_mode: "host"
-    env_file: .env
-    profiles:
-      - debug
