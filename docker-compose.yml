@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   resurface:
-    image: resurfaceio/resurface:3.4.24
+    image: resurfaceio/resurface:3.5.36
     container_name: resurface
     ports:
       - 7700:7700
@@ -10,11 +10,11 @@ services:
     deploy:
       resources:
         reservations:
-          cpus: '2'
-          memory: 6G
-        limits:
           cpus: '4'
           memory: 8G
+        limits:
+          cpus: '6'
+          memory: 10G
   
   httpbin:
     image: kennethreitz/httpbin
@@ -23,7 +23,7 @@ services:
       - 80:80
   
   sniffer:
-    image: resurfaceio/network-sniffer:1.2.3
+    image: resurfaceio/network-sniffer:1.4.0
     container_name: resurface-sniffer
     network_mode: "host"
     env_file: .env
