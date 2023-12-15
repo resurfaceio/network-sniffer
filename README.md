@@ -31,14 +31,14 @@ We use [GoReplay](https://github.com/resurfaceio/goreplay) to capture HTTP traff
 After modifying the `.env` file with the required [environment variables](#environment-variables), just run the following docker command in the host machine:
 
 ```bash
-docker run -d --name netsniffer --env-file .env --network host resurfaceio/network-sniffer:1.3.0
+docker run -d --name netsniffer --env-file .env --network host resurfaceio/network-sniffer:1.4.0
 ```
 
 The `--network host` option must be specified in to capture traffic from other containers (or non-containerized apps) running in the machine.
 
 ## Capturing encrypted traffic
 
-When capturing traffic from secure connections, network analyzer applications will sit between the client and your application acting as middlemen. However, in order to read the encrypted traffic these applications will require you to load both keys and certificates, increasing the attack surface for potential MITM attacks —which is exactly the opposite intent of secure connections. At Resurface, security is our main concern, which is why we **strongly** advice against loading your TLS/SSL keys into any application that does this. None of our integrations support capturing traffic from secure connections, including `network-sniffer`.
+When capturing traffic from secure connections, network analyzer applications will sit between the client and your application acting as middlemen. However, in order to read the encrypted traffic these applications will require you to load both keys and certificates, increasing the attack surface for potential MITM attacks —which is exactly the opposite intent of secure connections. At Graylog, security is one of our main concerns which is why we **strongly** advice against loading your TLS/SSL keys into any application that does this. None of our integrations support capturing traffic from secure connections, including `network-sniffer`.
 
 Instead, we recommend running the `network-sniffer` container upstream, after TLS termination occurs. For example, if TLS termination occurs in a reverse proxy, like this:
 
@@ -46,7 +46,7 @@ Instead, we recommend running the `network-sniffer` container upstream, after TL
 
 we suggest configuring the sniffer to capture from the backend applications directly. In this case, that means setting the `APP_PORTS` variable to `8080,3000,5432`.
 
-If TLS termination occurs within the application itself, we recommend using any of our instrumentation-application loggers: [logger-java](https://github.com/resurfaceio/logger-java), [logger-python](https://github.com/resurfaceio/logger-python), [logger-go](https://github.com/resurfaceio/logger-go), [logger-nodejs](https://github.com/resurfaceio/logger-nodejs), [logger-ruby](https://github.com/resurfaceio/logger-ruby), [logger-lua](https://github.com/resurfaceio/logger-lua), [logger-dotnet](https://github.com/resurfaceio/logger-dotnet)
+If TLS termination occurs within the application itself, we recommend using any of our instrumentation application loggers: [logger-java](https://github.com/resurfaceio/logger-java), [logger-python](https://github.com/resurfaceio/logger-python), [logger-go](https://github.com/resurfaceio/logger-go), [logger-nodejs](https://github.com/resurfaceio/logger-nodejs), [logger-ruby](https://github.com/resurfaceio/logger-ruby), [logger-lua](https://github.com/resurfaceio/logger-lua), [logger-dotnet](https://github.com/resurfaceio/logger-dotnet)
 
 ### Example: Demo app with network-sniffer as sidecar
 
@@ -79,9 +79,7 @@ All capture integrations by Resurface use two main environment variables:
 The `network-sniffer` application uses two additional variables:
 
 - `APP_PORTS` is a comma-separated list of integer values that correspond to the ports where your applications are being served in the host machine.
-- `NET_DEVICE` corresponds to a specific network interface to capture packets from. When not set (or set to an empty string), the application captures from all available interfaces. You can get a list of all the available interfaces with the `ip a` (unix) or `ipconfig` (Windows) commands.
-
-The `COMPOSE_PROFILES` environment variable sets the profile to use when no `--profle` option is passed when running `docker-compose -d up`
+- `NET_DEVICE` corresponds to a specific network interface to capture packets from. When not set (or set to an empty string), the application captures from all available interfaces. You can get a list of all the available interfaces with the `ip a` (Linux), `ifconfig` (mac), or `ipconfig` (Windows) commands.
 
 ## VPC mirroring
 
@@ -104,7 +102,7 @@ SNIFFER_MIRROR_VNIS=123
 and run the `network-sniffer` container in the target EC2 instance:
 
 ```bash
-docker run -d --name netsniffer --env-file .env --network host resurfaceio/network-sniffer:1.3.0
+docker run -d --name netsniffer --env-file .env --network host resurfaceio/network-sniffer:1.4.0
 ```
 
 ## Kubernetes
@@ -149,7 +147,7 @@ In this example, we have:
 - An unspecified kubernetes workload labelled with three different key-value pairs (`"key1=value1","key2=value2","key4=value4"`) on a kubernetes namespace named `ns3`, exposing unknown ports
 
 
-Use and replace the corresponding fields according to your specific case. For a complete reference on the values supported by the `resurfaceio/resurface` Helm chart, refer to the chart's [README](https://github.com/resurfaceio/containers/blob/v3.5.x/helm/resurfaceio/resurface/README.md).
+Use and replace the corresponding fields according to your specific case. For a complete reference on the values supported by the `resurfaceio/resurface` Helm chart, refer to the chart's [README](https://github.com/resurfaceio/containers/blob/v3.6.x/helm/resurfaceio/resurface/README.md).
 
 Once you have your `sniffer-values.yaml` file, you can go ahead and perform the corresponding helm upgrade:
 
