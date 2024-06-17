@@ -7,6 +7,10 @@ debug=$SNIFFER_DEBUG_ENABLED
 verbosity=${SNIFFER_DEBUG_VERBOSITY:=0}
 export_to=${SNIFFER_DEBUG_EXPORT:=none}
 pcap_buffer_size=${SNIFFER_PCAP_BUFFER_SIZE:=0}
+promiscuous=$SNIFFER_PROMISC_ENABLED
+rf_monitor=$SNIFFER_RF_MONITOR_ENABLED
+real_ip_header=$SNIFFER_REALIP_HEADER
+no_bpf=$SNIFFER_NOFILTER
 
 bpf() {
   bpf_ports=$(echo $1 | sed 's/,/ or /g')
@@ -24,7 +28,19 @@ inputs() {
     options="${options} --input-raw-buffer-size ${pcap_buffer_size}"
   fi
 
-  if [[ "$mode" == "mirror" ]]; then
+  if [ "$promiscuous" = "true" ]; then
+    options="${options} --input-raw-promisc"
+  fi
+
+  if [ "$rf_monitor" = "true" ]; then
+    options="${options} --input-raw-monitor"
+  fi
+
+  if [ -n "$real_ip_header" ]; then
+      options="${options} --input-raw-realip-header ${real_ip_header}"
+  fi
+
+  if [ "$mode" = "mirror" ]; then
     options="${options} --input-raw-engine vxlan"
     options="${options} --input-raw-vxlan-port ${SNIFFER_MIRROR_VXLANPORT:-4789}"
     vnis=$(echo $SNIFFER_MIRROR_VNIS | sed 's/,/ /g')
@@ -42,7 +58,7 @@ inputs() {
   #  "--input-raw-ignore-interface"
   #  "--input-raw-k8s-skip-ns"
   #  "--input-raw-k8s-skip-svc"
-  elif [[ "$mode" == "k8s" ]]; then
+  elif [ "$mode" = "k8s" ]; then
     # options=$K8S_INPUT
     options="${K8S_INPUT} --input-raw-track-response"
   else
@@ -56,7 +72,7 @@ inputs() {
 outputs() {
   options="--output-resurface $USAGE_LOGGERS_URL"
 
-  if [[ "$debug" == "true" ]]; then
+  if [ "$debug" = "true" ]; then
     if [ "$verbosity" -gt 0 ]; then
       options="${options} --verbose ${verbosity}"
     fi
@@ -68,11 +84,11 @@ outputs() {
     fi
 
     if [ "${export_to}" != "none" ]; then
-      if [ "${export_to}" == "s3" ]; then
+      if [ "${export_to}" = "s3" ]; then
         options="${options} --output-file s3://sniffer-debug-logs/${SNIFFER_DEBUG_DEAL_ID}/%Y-%m-%d.gz"
-      elif [ "${export_to}" == "local" ]; then
+      elif [ "${export_to}" = "local" ]; then
         options="${options} --output-file ./%Y-%m-%d.gz"
-      elif [ "${export_to}" == "http" ]; then
+      elif [ "${export_to}" = "http" ]; then
         options="${options} --output-http ${SNIFFER_DEBUG_HTTP_ENDPOINT}"
       else
         echo 'Invalid export option. Supported values are "s3", "local", "http", or "none"'
@@ -86,7 +102,7 @@ outputs() {
   echo $options
 }
 
-if [[ "$mode" == "mirror" || "$mode" == "k8s" ]]; then
+if [ "$mode" = "mirror" ] || [ "$mode" = "k8s" ] || [ "$no_bpf" = "true" ]; then
   gor $(inputs) $(outputs) "$(rules)"
 else
   gor $(inputs) "$(bpf $ports)" $(outputs) "$(rules)"
