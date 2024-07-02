@@ -63,7 +63,9 @@ inputs() {
     options="${K8S_INPUT} --input-raw-track-response"
   else
     options="${options} --input-raw-track-response"
-    options="${options} --input-raw-bpf-filter "
+    if [ "$no_bpf" != "true" ]; then
+      options="${options} --input-raw-bpf-filter "
+    fi
   fi
 
   echo $options
